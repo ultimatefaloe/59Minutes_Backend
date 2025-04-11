@@ -1,0 +1,31 @@
+# version: "latest" 
+services: 
+  express: 
+    container_name: "59Minutes_print_express"
+    build: ./
+    restart: always
+    volumes: 
+      - .:/user/src/app
+    # enviroment:
+    #   - NODE_ENV=development
+    env_file:
+      - .env.development
+    ports:
+      - "3000:3000"
+    command: 
+      - npm
+      - run
+      - start
+      - index.js
+    networks: 
+      - 59Minutes_print_express-net
+    # depend_on:
+    #   - mongodb
+
+
+volumes:
+  data:
+    driver: local
+networks:
+  59Minutes_print_express-net:
+    driver: bridge
