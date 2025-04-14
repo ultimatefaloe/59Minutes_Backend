@@ -2,21 +2,31 @@ import User from '../../Models/UserModel.js';
 import mongoose from 'mongoose';
 
 export default {
-    // Create a new user
     create: async (userData) => {
         try {
+            const existingUser = await User.findOne({ email: userData.email });
+            if (existingUser) {
+                return {
+                success: false,
+                error: 'User already exists',
+                code: 409, // Conflict
+                };
+            }
+        
+            // If no existing user, proceed to create a new one
             const newUser = new User(userData);
             const savedUser = await newUser.save();
             return { success: true, data: savedUser };
         } catch (error) {
             console.error('Error creating user:', error);
-            return { 
-                success: false, 
+            return {
+                success: false,
                 error: error.message,
-                code: error.code === 11000 ? 409 : 400 // 409 for duplicate key
+                code: 400,
             };
         }
     },
+  
 
     // Get user by ID
     get: async (id) => {
@@ -26,7 +36,7 @@ export default {
             }
             
             const user = await User.findById(id)
-                .select('-password') // Exclude password field
+                .select('-password')
                 .populate('wishlist', 'name price images')
                 .populate('cart.items.productId', 'name price images');
             

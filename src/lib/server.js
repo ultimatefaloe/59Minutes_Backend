@@ -1,6 +1,6 @@
 import express from 'express';
-import config from './config.js';
-import { initializeApp } from './initializer/initializeApp.js';
+import config from '../config/config.js';
+import {initializeApp} from './initializer/initializeApp.js';
 import dotenv from 'dotenv';
 
 dotenv.config();

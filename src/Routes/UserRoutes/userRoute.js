@@ -1,25 +1,45 @@
 import express from 'express';
-import userService from '../../service/user/userService.js'
-
+import userService from '../../Service/user/userService.js';
+import middleware from '../../Middleware/middleware.js';
 
 export const userRoutes = (router) => {
     const userRouter = express();
 
     router.use('/user', userRouter);
 
-    userRouter.post('/signup', async (req, res, next) => {
-        const userdata = req.body;
-        const response = await userService.create(userdata)
-        const data = response
-        res.status(200).json({
-            "msg": "hitting signup route",
-            "data" : data
-        })
-    });
-
-    userRouter.get('/login/:email', async (req, res, next) => {
+    userRouter.post('/signup', middleware.authRequired(), async (req, res, next) => {
         try {
-            const email = req.params.email;
+          console.log('req.user:', req.user);
+          console.log('req.body:', req.body);
+      
+          const userdata = { ...req.user, ...req.body };
+      
+          if (!userdata.displayName) {
+            return res.status(400).json({ message: 'displayName is required.' });
+          }
+      
+          const response = await userService.create(userdata);
+      
+          if (!response) {
+            return res.status(400).json({ message: 'Sign up unsuccessful, try again!' });
+          }
+      
+          res.status(201).json({
+            msg: 'User signed up successfully',
+            data: response,
+          });
+        } catch (e) {
+          console.error('Failed to sign up:', e.message);
+          res.status(500).json({
+            message: e.message || 'Internal server error',
+          });
+        }
+    });
+      
+
+    userRouter.get('/login/:email', middleware.authRequired(), async (req, res, next) => {
+        try {
+            const email = req.user.email;
 
             if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
                 return res.status(400).json({
@@ -46,9 +66,28 @@ export const userRoutes = (router) => {
         }
     });
 
-    userRouter.put('/forget-password', (req, res, next) => {
-        res.status(200).json({"msg": "hitting reset password route"})
+    userRouter.patch('/forget-password/:id', async(req, res, next) => {
+        try{
+            const id = req.params.id;
+            const updateData = req.body;
 
+            const response = await userService.update(id, updateData);
+
+            if(!response){
+                return res.status(400).json({
+                    message: "Failed to update user details"
+                })
+            }
+            res.status(200).json({
+                message: "Update successful",
+                "data": response,
+            })
+        } catch (e) {
+            console.log("Fail to update user details: ", e.error);
+            res.status(500).json({
+                message: e.message
+            })
+        }
     });
 
     userRouter.delete('/delete/:id', async (req, res, next) => {
@@ -64,7 +103,7 @@ export const userRoutes = (router) => {
             }
 
             res.status(200).json({
-                message: `${response.id} is deleted successfully`,
+                message: `${id} is deleted successfully`,
             })
         } catch (e) {
             console.log('delete fail:', e.error);

@@ -1,16 +1,19 @@
 import mongoose from "mongoose";
 
 const vendorSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    // vendorId: { type: mongoose.Schema.Types.ObjectId, required: true },
     businessName: { type: String, required: true },
-    businessDescription: { type: String },
+    businessEmail: { type: String, required: true },
+    businessPhoneNumber: { type: Number, required: true },
+    businessDescription: { type: String, required: true },
+    businessPassword: { type: String, required: true },
     businessLogo: { type: String },
     businessAddress: {
       street: String,
       city: String,
       state: String,
       country: { type: String, default: 'Nigeria' },
-      postalCode: String
+      postalCode: String,
     },
     taxId: { type: String },
     bankDetails: {
@@ -28,4 +31,4 @@ const vendorSchema = new mongoose.Schema({
 
 const Vendor = mongoose.model('Vendor', vendorSchema);
 
-module.exports = Vendor;
+export default Vendor;

@@ -1,5 +1,5 @@
 export default {
-    port: process.env.PORT || 3000,
+    port: process.env.PORT || 4000,
 
     api: {
         routes: `/api`,
@@ -8,6 +8,8 @@ export default {
     switch: {
         default: true,
         user: true,
+        product: true,
+        vendor: true,
     },
 
     mongo: {
