@@ -1,4 +1,4 @@
-import Vendor from '../../models/VendorModel.js';
+import Vendor from '../../Models/VendorModel.js';
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 

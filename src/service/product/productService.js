@@ -5,26 +5,28 @@ const productService = {
     // Create a new product
     create: async (productData) => {
         try {
-            // Validate required fields
-            if (!productData.name || !productData.description || !productData.price || 
-                !productData.category || !productData.vendor || !productData.stock || !productData.price) {
-                return { 
-                    success: false, 
-                    error: 'Missing required fields', 
-                    code: 400 
-                };
+          // Validate required fields
+          const requiredFields = ['name', 'description', 'price', 'category', 'vendor', 'stock'];
+          for (const field of requiredFields) {
+            if (!productData[field]) {
+              return {
+                success: false,
+                error: `Missing required field: ${field}`,
+                code: 400,
+              };
             }
-
-            const newProduct = new Product(productData);
-            const savedProduct = await newProduct.save();
-            return { success: true, data: savedProduct };
+          }
+    
+          const newProduct = new Product(productData);
+          const savedProduct = await newProduct.save();
+          return { success: true, data: savedProduct };
         } catch (error) {
-            console.error('Error creating product:', error);
-            return { 
-                success: false, 
-                error: error.message,
-                code: error.code === 11000 ? 409 : 400 // 409 for duplicate key
-            };
+          console.error('Error creating product:', error);
+          return {
+            success: false,
+            error: error.message,
+            code: error.code === 11000 ? 409 : 400, // 409 for duplicate key
+          };
         }
     },
 
@@ -58,21 +60,22 @@ const productService = {
             if (!mongoose.Types.ObjectId.isValid(id)) {
                 return { success: false, error: 'Invalid product ID', code: 400 };
             }
-
-            // Prevent certain fields from being updated
+    
+            // Prevent updates to immutable or sensitive fields
             delete updateData._id;
             delete updateData.createdAt;
-
+            delete updateData.vendor; // Protect vendor linkage
+    
             const updatedProduct = await Product.findByIdAndUpdate(
                 id, 
                 { ...updateData, updatedAt: Date.now() },
                 { new: true, runValidators: true }
             );
-
+    
             if (!updatedProduct) {
                 return { success: false, error: 'Product not found', code: 404 };
             }
-
+    
             return { success: true, data: updatedProduct };
         } catch (error) {
             console.error('Error updating product:', error);
