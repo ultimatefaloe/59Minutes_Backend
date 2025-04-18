@@ -91,7 +91,6 @@ export const productRoute = (router) => {
                     message: 'Vendor not found or unauthorized'
                 });
             }
-
             delete req.body.vendor; // Prevent vendor change
 
             const product = await productService.getById(productId);
@@ -101,7 +100,9 @@ export const productRoute = (router) => {
                     message: 'Product not found'
                 });
             }
-
+            console.log(productId)
+            console.log(vendor._id.toString())
+            console.log(product)
             if (!product.vendor || product.vendor.toString() !== vendor._id.toString()) {
                 return res.status(403).json({
                     success: false,

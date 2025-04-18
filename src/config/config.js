@@ -7,6 +7,7 @@ export default {
 
     switch: {
         default: true,
+        cat: true,
         user: true,
         product: true,
         vendor: true,

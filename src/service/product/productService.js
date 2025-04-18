@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Product from '../../Models/ProductModel.js';
-
+import Category from '../../Models/categoryModel.js';
+import Review from '../../Models/ReviewModel.js'
 const productService = {
     // Create a new product
     create: async (productData) => {
@@ -31,16 +32,15 @@ const productService = {
     },
 
     // Get product by ID
-    get: async (id) => {
+    getById: async (id) => {
         try {
             if (!mongoose.Types.ObjectId.isValid(id)) {
                 return { success: false, error: 'Invalid product ID', code: 400 };
             }
             
             const product = await Product.findById(id)
-                .populate('category', 'name')
-                .populate('subCategory', 'name')
-                .populate('vendor', 'name')
+                .populate('category', '_id')
+                .populate('vendor', '_id')
                 .populate('reviews', 'rating comment');
             
             if (!product) {
