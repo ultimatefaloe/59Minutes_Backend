@@ -23,7 +23,9 @@
     "express-validator": "^7.2.1",
     "firebase": "^11.6.0",
     "firebase-admin": "^13.2.0",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.12.1",
+    "mongoose-paginate-v2": "^1.9.0",
     "nodemon": "^3.1.9",
     "paystack": "^2.0.1"
   }

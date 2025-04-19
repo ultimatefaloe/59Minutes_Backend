@@ -39,8 +39,8 @@ const productService = {
             }
             
             const product = await Product.findById(id)
-                .populate('category', '_id')
-                .populate('vendor', '_id')
+                .populate('category', '_id name') // Populate full info
+                .populate('vendor', '_id name')
                 .populate('reviews', 'rating comment');
             
             if (!product) {
@@ -53,6 +53,7 @@ const productService = {
             return { success: false, error: error.message, code: 500 };
         }
     },
+    
 
     // Update product
     update: async (id, updateData) => {
@@ -64,7 +65,7 @@ const productService = {
             // Prevent updates to immutable or sensitive fields
             delete updateData._id;
             delete updateData.createdAt;
-            delete updateData.vendor; // Protect vendor linkage
+            delete updateData.vendor;
     
             const updatedProduct = await Product.findByIdAndUpdate(
                 id, 
@@ -160,7 +161,7 @@ const productService = {
     },
 
     // Search products by text
-    search: async (searchTerm, limit = 5) => {
+    search: async (searchTerm, limit = 25) => {
         try {
             const products = await Product.find(
                 { $text: { $search: searchTerm } },

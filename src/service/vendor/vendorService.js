@@ -1,6 +1,7 @@
 import Vendor from '../../Models/VendorModel.js';
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
+import Middleware from '../../Middleware/middleware.js';
 
 
 const vendorService = {
@@ -47,7 +48,58 @@ const vendorService = {
             };
         }
     },
-    
+
+    // Login
+    login: async(vendorData) => {
+        try {
+            const { businessEmail, businessPassword } = vendorData;
+
+            if (!businessEmail || !businessPassword) {
+                return {
+                    success: false,
+                    error: 'Missing email or password',
+                    code: 400
+                };
+            }
+
+            // Find vendor by email
+            const vendor = await Vendor.findOne({ businessEmail });
+            if (!vendor) {
+                return {
+                    success: false,
+                    error: 'Vendor not found',
+                    code: 404
+                };
+            }
+
+            // Check if password matches
+            const isMatch = await bcrypt.compare(businessPassword, vendor.businessPassword);
+            if (!isMatch) {
+                return {
+                    success: false,
+                    error: 'Invalid credentials',
+                    code: 401
+                };
+            }
+
+            // Generate JWT token
+            const token = Middleware.generateToken(vendor);
+
+            return {
+                success: true,
+                data: { token, vendor }
+            };
+
+        } catch (error) {
+            console.error('Error during login:', error);
+            return {
+                success: false,
+                error: error.message,
+                code: 500
+            };
+        }
+    },
+
     // Get vendor by ID
     get: async (id) => {
         try {

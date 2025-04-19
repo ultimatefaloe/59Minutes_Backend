@@ -1,6 +1,8 @@
 import admin from '../config/firebase-config.js';
+import jwt from 'jsonwebtoken';
 
 class Middleware {
+
   decodeToken() {
     return async (req, res, next) => {
       req.user = null;
@@ -15,13 +17,13 @@ class Middleware {
         } catch (error) {
           console.warn('Token decode failed:', error.message);
           req.user = null;
-          return next(); // Proceed even if token is invalid
+          return next();
         }
       }
 
-      return next(); // Proceed if no token
+      return next();
     };
-  }
+  };
 
   authRequired() {
     return async (req, res, next) => {
@@ -49,7 +51,37 @@ class Middleware {
         });
       }
     };
-  }
+  };
+
+  jwtAuthRequired(){
+    return (req, res, next) => {
+      const authHeader = req.headers.authorization;
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+      }
+
+      const token = authHeader.split(' ')[1];
+
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_PRIVATE_KEY);
+        req.user = decoded; // Attach decoded data (like userId, role, etc.) to request
+        next();
+      } catch (err) {
+        return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
+      }
+    };
+  };
+
+  generateToken(user) {
+    return jwt.sign(
+      { id: user._id.toString(), role: user.role }, 
+      process.env.JWT_PRIVATE_KEY,
+      { expiresIn: '7d' }
+    );
+}
+
+
 }
 
 export default new Middleware();
