@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import Category from '../Models/categoryModel.js';
+import Category from '../Models/CategoryModel.js';
 
 export const resolveCategoryId = async (categoryInput) => {
     if (!categoryInput) return null;

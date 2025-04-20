@@ -74,7 +74,7 @@ export const vendorRoute = (router) => {
     });
 
     // UPDATE vendo()r
-    vendorRouter.put('/:id', Middleware.authRequired(), async (req, res) => {
+    vendorRouter.put('/:id', Middleware.jwtDecodeToken(), async (req, res) => {
         try {
             const response = await vendorService.update(req.params.id, req.body);
             return res.status(response.code || 200).json(response);
@@ -85,7 +85,7 @@ export const vendorRoute = (router) => {
     });
 
     // DELETE (soft delete) vendor
-    vendorRouter.delete('/:id', Middleware.authRequired(), async (req, res) => {
+    vendorRouter.delete('/:id', Middleware.jwtDecodeToken(), async (req, res) => {
         try {
             const response = await vendorService.delete(req.params.id);
             return res.status(response.code || 200).json(response);
@@ -107,7 +107,7 @@ export const vendorRoute = (router) => {
     });
 
     // VERIFY vendor (admin use)
-    vendorRouter.patch('/verify/:id', Middleware.authRequired(), async (req, res) => {
+    vendorRouter.patch('/verify/:id', Middleware.jwtDecodeToken(), async (req, res) => {
         try {
             const { status, adminId } = req.body;
             const response = await vendorService.verify(req.params.id, status, adminId);

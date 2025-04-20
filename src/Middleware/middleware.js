@@ -53,7 +53,7 @@ class Middleware {
     };
   };
 
-  jwtAuthRequired(){
+  jwtDecodeToken() {
     return (req, res, next) => {
       const authHeader = req.headers.authorization;
 

@@ -1,6 +1,7 @@
 import express from 'express';
 import categoryService from '../../Service/category/categoryService.js';
-import Middleware from '../../Middleware/auth-require.js';
+import Middleware from '../../Middleware/middleware.js';
+import { resolveCategoryId } from '../../utils/resolveCategoryId.js';
 
 const categoryRouter = express.Router();
 
@@ -9,7 +10,7 @@ export const categoryRoute = (router) => {
     router.use('/category', categoryRouter);
 
     // Create category
-    categoryRouter.post('/add-category', Middleware.authRequired(), async (req, res) => {
+    categoryRouter.post('/add-category', Middleware.jwtDecodeToken(), async (req, res) => {
         const result = await categoryService.create(req.body);
         return res.status(result.code || (result.success ? 201 : 400)).json(result);
     });
@@ -20,10 +21,31 @@ export const categoryRoute = (router) => {
         return res.status(result.code || 200).json(result);
     });
 
-    // Get category by ID
-    categoryRouter.get('/:id', async (req, res) => {
-        const result = await categoryService.getById(req.params.id);
-        return res.status(result.code || 200).json(result);
+    // Get Product by category ID
+    categoryRouter.get('/products/:name', async (req, res) => {
+        try {
+            const categoryNameOrId = req.params.name;
+    
+            const resolvedCategoryId = await resolveCategoryId(categoryNameOrId);
+    
+            if (!resolvedCategoryId) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Category '${categoryNameOrId}' not found`,
+                });
+            }
+    
+            const categoryProducts = await categoryService.getById(resolvedCategoryId);
+    
+            return res.status(categoryProducts.code || 200).json(categoryProducts);
+    
+        } catch (error) {
+            console.error('Error getting category products:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Internal server error',
+            });
+        }
     });
 
     // Update category

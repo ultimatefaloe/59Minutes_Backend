@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Category from '../../Models/categoryModel.js';
+import Product from '../../Models/ProductModel.js';
 
 const categoryService = {
   // Create a new category
@@ -36,23 +37,25 @@ const categoryService = {
   },
 
   // Get category by ID
-  getById: async (id) => {
+  getById: async (categoryId) => {
     try {
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        return { success: false, error: 'Invalid category ID', code: 400 };
-      }
+        if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+            return { success: false, error: 'Invalid category ID', code: 400 };
+        }
 
-      const category = await Category.findById(id);
-      if (!category) {
-        return { success: false, error: 'Category not found', code: 404 };
-      }
-3
-      return { success: true, data: category };
+        const products = await Product.find({ category: categoryId })
+            .select('name price images status stock')
+            .sort('-createdAt');
+
+        return { success: true, data: products };
+
     } catch (error) {
-      console.error('Error fetching category:', error);
-      return { success: false, error: error.message, code: 500 };
+        console.error('Error fetching category products:', error);
+        return { success: false, error: error.message, code: 500 };
     }
   },
+
+
 
   // Update category
   update: async (id, updateData) => {
