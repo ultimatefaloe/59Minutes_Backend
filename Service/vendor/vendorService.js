@@ -1,183 +1,311 @@
-import User from '../../Models/UserModel.js';
+import Vendor from '../../Models/VendorModel.js';
 import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
+import Middleware from '../../Middleware/middleware.js';
 
-export default {
-    create: async (userData) => {
+
+const vendorService = {
+    // Create a new vendor
+    create: async (vendorData) => {
         try {
-            const existingUser = await User.findOne({ email: userData.email });
-            if (existingUser) {
-                return {
-                success: false,
-                error: 'User already exists',
-                code: 409,
+            const { businessName, businessDescription, businessPhoneNumber, businessEmail, businessPassword } = vendorData;
+    
+            if (!businessName || !businessDescription || !businessPhoneNumber || !businessEmail || !businessPassword) {
+                return { 
+                    success: false, 
+                    error: 'Missing required fields: businessName, businessDescription, businessPhoneNumber, businessEmail, or businessPassword',
+                    code: 400
                 };
             }
-        
-            // If no existing user, proceed to create a new one
-            const newUser = new User(userData);
-            const savedUser = await newUser.save();
-            return { success: true, data: savedUser };
+            const hashedPassword = await bcrypt.hash(businessPassword, 10);
+            vendorData.businessPassword = hashedPassword;
+
+            // Check if vendor already exists
+            const existingVendor = await Vendor.findOne({ businessEmail });
+            if (existingVendor) {
+                return {
+                    success: false,
+                    error: 'Vendor already exists with this email',
+                    code: 409
+                };
+            }
+    
+            // Create new vendor
+            const newVendor = new Vendor(vendorData);
+            const savedVendor = await newVendor.save();
+    
+            return { 
+                success: true,
+                data: savedVendor
+            };
+    
         } catch (error) {
-            console.error('Error creating user:', error);
+            console.error('Error creating vendor:', error);
             return {
                 success: false,
                 error: error.message,
-                code: 400,
+                code: error.code === 11000 ? 409 : 400
             };
         }
     },
-  
-    // Get user by ID
+
+    // Login
+    login: async(vendorData) => {
+        try {
+            const { businessEmail, businessPassword } = vendorData;
+
+            if (!businessEmail || !businessPassword) {
+                return {
+                    success: false,
+                    error: 'Missing email or password',
+                    code: 400
+                };
+            }
+
+            // Find vendor by email
+            const vendor = await Vendor.findOne({ businessEmail });
+            if (!vendor) {
+                return {
+                    success: false,
+                    error: 'Vendor not found',
+                    code: 404
+                };
+            }
+
+            // Check if password matches
+            const isMatch = await bcrypt.compare(businessPassword, vendor.businessPassword);
+            if (!isMatch) {
+                return {
+                    success: false,
+                    error: 'Invalid credentials',
+                    code: 401
+                };
+            }
+
+            // Generate JWT token
+            const token = Middleware.generateToken(vendor);
+
+            return {
+                success: true,
+                data: { token, vendor }
+            };
+
+        } catch (error) {
+            console.error('Error during login:', error);
+            return {
+                success: false,
+                error: error.message,
+                code: 500
+            };
+        }
+    },
+
+    // Get vendor by ID
     get: async (id) => {
         try {
             if (!mongoose.Types.ObjectId.isValid(id)) {
-                return { success: false, error: 'Invalid user ID', code: 400 };
+                return { success: false, error: 'Invalid vendor ID', code: 400 };
             }
             
-            const user = await User.findById(id)
-                .select('-password')
-                .populate('wishlist', 'name price images')
-                .populate('cart.items.productId', 'name price images');
+            const vendor = await Vendor.findById(id)
+                .populate('products', 'name price images');
             
-            if (!user) {
-                return { success: false, error: 'User not found', code: 404 };
+            if (!vendor) {
+                return { success: false, error: 'Vendor not found', code: 404 };
             }
             
-            return { success: true, data: user };
+            return { success: true, data: vendor };
         } catch (error) {
-            console.error('Error fetching user:', error);
+            console.error('Error fetching vendor:', error);
             return { success: false, error: error.message, code: 500 };
         }
     },
 
-    // Get user by email (for authentication)
-    getByEmail: async (email) => {
-        try {
-            const user = await User.findOne({ email });
-            if (!user) {
-                return { success: false, error: 'User not found', code: 404 };
-            }
-            return { success: true, data: user };
-        } catch (error) {
-            console.error('Error fetching user by email:', error);
-            return { success: false, error: error.message, code: 500 };
-        }
-    },
-
-    // Update user
+    // Update vendor
     update: async (id, updateData) => {
         try {
             if (!mongoose.Types.ObjectId.isValid(id)) {
-                return { success: false, error: 'Invalid user ID', code: 400 };
+                return { success: false, error: 'Invalid vendor ID', code: 400 };
             }
 
-            // Prevent role updates through this endpoint
-            if (updateData.role) {
-                delete updateData.role;
-            }
+            // Prevent certain fields from being updated
+            delete updateData._id;
+            delete updateData.createdAt;
+            delete updateData.verificationStatus; // Special permissions needed for this
 
-            const updatedUser = await User.findByIdAndUpdate(
+            const updatedVendor = await Vendor.findByIdAndUpdate(
                 id, 
-                updateData, 
+                { ...updateData, updatedAt: Date.now() },
                 { new: true, runValidators: true }
-            ).select('-password');
+            );
 
-            if (!updatedUser) {
-                return { success: false, error: 'User not found', code: 404 };
+            if (!updatedVendor) {
+                return { success: false, error: 'Vendor not found', code: 404 };
             }
 
-            return { success: true, data: updatedUser };
+            return { success: true, data: updatedVendor };
         } catch (error) {
-            console.error('Error updating user:', error);
-            return { success: false, error: error.message, code: 400 };
+            console.error('Error updating vendor:', error);
+            return { 
+                success: false, 
+                error: error.message,
+                code: error.code === 11000 ? 409 : 400 
+            };
         }
     },
 
-    // Delete user
+    // Delete vendor (soft delete)
     delete: async (id) => {
         try {
             if (!mongoose.Types.ObjectId.isValid(id)) {
-                return { success: false, error: 'Invalid user ID', code: 400 };
+                return { success: false, error: 'Invalid vendor ID', code: 400 };
             }
 
-            const deletedUser = await User.findByIdAndDelete(id);
-            if (!deletedUser) {
-                return { success: false, error: 'User not found', code: 404 };
+            const deletedVendor = await Vendor.findByIdAndUpdate(
+                id,
+                { status: 'inactive' }, // Soft delete
+                { new: true }
+            );
+            
+            if (!deletedVendor) {
+                return { success: false, error: 'Vendor not found', code: 404 };
+            }
+            
+            return { success: true, data: { message: 'Vendor deactivated successfully' } };
+        } catch (error) {
+            console.error('Error deleting vendor:', error);
+            return { success: false, error: error.message, code: 500 };
+        }
+    },
+
+    // List vendors with pagination and filtering
+    list: async ({ 
+        page = 1, 
+        limit = 10, 
+        sort = '-createdAt',
+        status = 'active',
+        verified = null,
+        search = ''
+    }) => {
+        try {
+            const query = { status };
+            
+            if (verified !== null) {
+                query.verificationStatus = verified ? 'verified' : { $ne: 'verified' };
             }
 
-            return { success: true, data: { message: 'User deleted successfully' } };
+            if (search) {
+                query.$or = [
+                    { businessName: { $regex: search, $options: 'i' } },
+                    { 'businessAddress.city': { $regex: search, $options: 'i' } }
+                ];
+            }
+
+            const options = {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                sort,
+                populate: {
+                    path: 'products',
+                    select: 'name price images status',
+                    match: { status: 'published' }
+                }
+            };
+
+            const vendors = await Vendor.paginate(query, options);
+
+            return { 
+                success: true, 
+                data: {
+                    vendors: vendors.docs,
+                    total: vendors.totalDocs,
+                    pages: vendors.totalPages,
+                    page: vendors.page
+                }
+            };
         } catch (error) {
-            console.error('Error deleting user:', error);
+            console.error('Error listing vendors:', error);
             return { success: false, error: error.message, code: 500 };
         }
     },
 
-    // Add to wishlist
-    addToWishlist: async (userId, productId) => {
+    // Verify vendor (admin function)
+    verify: async (id, status, adminId) => {
         try {
-            const user = await User.findByIdAndUpdate(
-                userId,
-                { $addToSet: { wishlist: productId } }, // $addToSet prevents duplicates
-                { new: true }
-            ).select('wishlist');
-            
-            return { success: true, data: user };
-        } catch (error) {
-            console.error('Error adding to wishlist:', error);
-            return { success: false, error: error.message, code: 500 };
-        }
-    },
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return { success: false, error: 'Invalid vendor ID', code: 400 };
+            }
 
-    // Remove from wishlist
-    removeFromWishlist: async (userId, productId) => {
-        try {
-            const user = await User.findByIdAndUpdate(
-                userId,
-                { $pull: { wishlist: productId } },
-                { new: true }
-            ).select('wishlist');
-            
-            return { success: true, data: user };
-        } catch (error) {
-            console.error('Error removing from wishlist:', error);
-            return { success: false, error: error.message, code: 500 };
-        }
-    },
+            if (!['verified', 'rejected'].includes(status)) {
+                return { success: false, error: 'Invalid verification status', code: 400 };
+            }
 
-    // Update cart
-    updateCart: async (userId, cartData) => {
-        try {
-            const user = await User.findByIdAndUpdate(
-                userId,
-                { cart: cartData },
-                { new: true }
-            ).select('cart');
-            
-            return { success: true, data: user };
-        } catch (error) {
-            console.error('Error updating cart:', error);
-            return { success: false, error: error.message, code: 500 };
-        }
-    },
-
-    // Clear cart
-    clearCart: async (userId) => {
-        try {
-            const user = await User.findByIdAndUpdate(
-                userId,
+            const updatedVendor = await Vendor.findByIdAndUpdate(
+                id,
                 { 
-                    cart: {
-                        items: [],
-                        totalPrice: 0
-                    } 
+                    verificationStatus: status,
+                    verifiedBy: adminId,
+                    verifiedAt: Date.now() 
                 },
                 { new: true }
-            ).select('cart');
-            
-            return { success: true, data: user };
+            );
+
+            if (!updatedVendor) {
+                return { success: false, error: 'Vendor not found', code: 404 };
+            }
+
+            return { success: true, data: updatedVendor };
         } catch (error) {
-            console.error('Error clearing cart:', error);
+            console.error('Error verifying vendor:', error);
+            return { success: false, error: error.message, code: 500 };
+        }
+    },
+
+    // Get vendor statistics
+    getStats: async (vendorId) => {
+        try {
+            if (!mongoose.Types.ObjectId.isValid(vendorId)) {
+                return { success: false, error: 'Invalid vendor ID', code: 400 };
+            }
+
+            const stats = await Vendor.aggregate([
+                { $match: { _id: mongoose.Types.ObjectId(vendorId) } },
+                {
+                    $lookup: {
+                        from: 'products',
+                        localField: 'products',
+                        foreignField: '_id',
+                        as: 'productsData'
+                    }
+                },
+                {
+                    $project: {
+                        totalProducts: { $size: '$productsData' },
+                        activeProducts: {
+                            $size: {
+                                $filter: {
+                                    input: '$productsData',
+                                    as: 'product',
+                                    cond: { $eq: ['$$product.status', 'published'] }
+                                }
+                            }
+                        },
+                        totalSales: 1,
+                        rating: 1
+                    }
+                }
+            ]);
+
+            if (!stats.length) {
+                return { success: false, error: 'Vendor not found', code: 404 };
+            }
+
+            return { success: true, data: stats[0] };
+        } catch (error) {
+            console.error('Error getting vendor stats:', error);
             return { success: false, error: error.message, code: 500 };
         }
     }
 };
+
+export default vendorService;
