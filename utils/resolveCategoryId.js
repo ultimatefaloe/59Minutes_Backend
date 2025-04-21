@@ -14,5 +14,5 @@ export const resolveCategoryId = async (categoryInput) => {
     const categoryByName = await Category.findOne({ name: trimmedInput });
     if (categoryByName) return categoryByName._id;
 
-    return null; // or throw new Error('Category not found');
+    return null; 
 };
