@@ -14,6 +14,7 @@ export default {
     },
 
     mongo: {
-        connection_string: process.env.CONNECTION_URI || `mongodb://localhost:27017/?authMechanism=DEFAULT`
+        encodedusername: process.env.DB_USERNAME,
+        encodedpassword: process.env.DB_PASSWORD
     }
 }
