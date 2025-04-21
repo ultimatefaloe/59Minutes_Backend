@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import Category from '../../Models/categoryModel.js';
+import Category from '../../Models/CategoryModel.js';
 import Product from '../../Models/ProductModel.js';
 
 const categoryService = {

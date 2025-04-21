@@ -1,6 +1,6 @@
 import express from 'express';
 import userService from '../../Service/user/userService.js';
-import Middleware from '../../Middleware/auth-require.js';
+import Middleware from '../../Middleware/middleware.js';
 
 export const userRoutes = (router) => {
     const userRouter = express();

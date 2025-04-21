@@ -9,7 +9,7 @@ export default {
                 return {
                 success: false,
                 error: 'User already exists',
-                code: 409, // Conflict
+                code: 409,
                 };
             }
         
@@ -27,7 +27,6 @@ export default {
         }
     },
   
-
     // Get user by ID
     get: async (id) => {
         try {

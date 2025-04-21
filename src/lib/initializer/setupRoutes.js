@@ -1,7 +1,7 @@
 import express from 'express';
 import routes from "../../Routes/routes.js";
 import config from "../../config/config.js";
-import Middleware from "../../Middleware/auth-require.js"
+import Middleware from "../../Middleware/middleware.js"
 import cors from 'cors'
 
 export const setupRoutes = (app) => {
