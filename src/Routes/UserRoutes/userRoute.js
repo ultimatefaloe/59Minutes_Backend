@@ -1,13 +1,13 @@
 import express from 'express';
 import userService from '../../Service/user/userService.js';
-import middleware from '../../Middleware/middleware.js';
+import Middleware from '../../Middleware/auth-require.js';
 
 export const userRoutes = (router) => {
     const userRouter = express();
 
     router.use('/user', userRouter);
 
-    userRouter.post('/signup', middleware.authRequired(), async (req, res, next) => {
+    userRouter.post('/signup', Middleware.authRequired(), async (req, res, next) => {
         try {
           console.log('req.user:', req.user);
           console.log('req.body:', req.body);
@@ -37,7 +37,7 @@ export const userRoutes = (router) => {
     });
       
 
-    userRouter.get('/login/:email', middleware.authRequired(), async (req, res, next) => {
+    userRouter.get('/login/:email', Middleware.authRequired(), async (req, res, next) => {
         try {
             const email = req.user.email;
 
