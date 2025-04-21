@@ -1,16 +1,13 @@
 {
-  "name": "59MinutesPrint-api",
+  "name": "59MinutesPrint_backend",
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "nodemon index.js",
-    "docker:build": "docker-compose up --build",
-    "docker:run": "docker compose up",
-    "docker:stop": "docker compose up"
+    "start": "nodemon index"
   },
   "keywords": [],
-  "author": "",
+  "author": "ULTIMATE",
   "license": "ISC",
   "description": "",
   "dependencies": {
