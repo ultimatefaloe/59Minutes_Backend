@@ -1,3 +1,4 @@
 /node_modules/
 /.env/
-/src/lib/config/serviceAccountKey.json
+/lib/config/serviceAccountKey.json
+/.gitignore
