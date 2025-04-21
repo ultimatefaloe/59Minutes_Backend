@@ -1,5 +1,5 @@
 import express from 'express';
-import userService from '../../Service/user/userService.js';
+import userService from '../../service/user/userService.js';
 import middleware from '../../Middleware/middleware.js';
 
 export const userRoutes = (router) => {
