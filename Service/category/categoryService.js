@@ -39,23 +39,37 @@ const categoryService = {
   // Get category by ID
   getById: async (categoryId) => {
     try {
-        if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-            return { success: false, error: 'Invalid category ID', code: 400 };
-        }
+      // Check if the category ID is valid
+      if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+        return { success: false, error: 'Invalid category ID', code: 400 };
+      }
 
-        const products = await Product.find({ category: categoryId })
-            .select('name price images status stock')
-            .sort('-createdAt');
+      // Find products in the given category
+      const products = await Product.find({ category: categoryId })
+        .select('name price images status stock')
+        .sort('-createdAt');
 
-        return { success: true, data: products };
+      // Return an empty array if no products are found
+      if (products.length === 0) {
+        return { success: true, data: [] }; // Return empty array if no products found
+      }
 
+      // Return products if found
+      return { success: true, data: products };
+      
     } catch (error) {
-        console.error('Error fetching category products:', error);
-        return { success: false, error: error.message, code: 500 };
+      // Log and handle error
+      console.error('Error fetching category products:', error);
+      
+      // Return more specific error messages based on error type
+      if (error.name === 'MongoError') {
+        return { success: false, error: 'Database error occurred', code: 500 };
+      }
+      
+      // Generic error message if something unexpected happens
+      return { success: false, error: 'An unexpected error occurred', code: 500 };
     }
   },
-
-
 
   // Update category
   update: async (id, updateData) => {
