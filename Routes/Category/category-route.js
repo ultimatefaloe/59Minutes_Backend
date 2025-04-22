@@ -32,6 +32,7 @@ export const categoryRoute = (router) => {
                 return res.status(400).json({
                     success: false,
                     message: `Category '${categoryNameOrId}' not found`,
+                    data: []
                 });
             }
     

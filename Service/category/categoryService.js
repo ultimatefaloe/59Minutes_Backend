@@ -39,34 +39,26 @@ const categoryService = {
   // Get category by ID
   getById: async (categoryId) => {
     try {
-      // Check if the category ID is valid
       if (!mongoose.Types.ObjectId.isValid(categoryId)) {
         return { success: false, error: 'Invalid category ID', code: 400 };
       }
 
-      // Find products in the given category
       const products = await Product.find({ category: categoryId })
         .select('name price images status stock')
         .sort('-createdAt');
 
-      // Return an empty array if no products are found
       if (products.length === 0) {
-        return { success: true, data: [] }; // Return empty array if no products found
+        return { success: true, data: [] };
       }
 
-      // Return products if found
       return { success: true, data: products };
       
     } catch (error) {
-      // Log and handle error
       console.error('Error fetching category products:', error);
       
-      // Return more specific error messages based on error type
       if (error.name === 'MongoError') {
         return { success: false, error: 'Database error occurred', code: 500 };
       }
-      
-      // Generic error message if something unexpected happens
       return { success: false, error: 'An unexpected error occurred', code: 500 };
     }
   },
