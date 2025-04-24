@@ -1,18 +1,21 @@
 import mongoose from 'mongoose';
 import Category from '../Models/CategoryModel.js';
 
-export const resolveCategoryId = async (categoryInput) => {
-    if (!categoryInput) return null;
-
-    const trimmedInput = categoryInput.trim();
-
-    if (mongoose.Types.ObjectId.isValid(trimmedInput)) {
-        const category = await Category.findById(trimmedInput);
-        if (category) return category._id;
+export const resolveCategoryId = async(identifier) => {
+    if (mongoose.Types.ObjectId.isValid(identifier)) {
+      const category = await Category.findById(identifier).select('_id').lean();
+      return category?._id;
     }
-
-    const categoryByName = await Category.findOne({ name: trimmedInput });
-    if (categoryByName) return categoryByName._id;
-
-    return null; 
+    
+    let category = await Category.findOne({ 
+      slug: identifier.toLowerCase().trim() 
+    }).select('_id').lean();
+    
+    if (!category) {
+      category = await Category.findOne({ 
+        name: { $regex: new RegExp(`^${identifier}$`, 'i') } 
+      }).select('_id').lean();
+    }
+    
+    return category?._id;
 };

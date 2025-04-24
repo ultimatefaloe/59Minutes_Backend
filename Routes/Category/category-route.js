@@ -21,33 +21,44 @@ export const categoryRoute = (router) => {
         return res.status(result.code || 200).json(result);
     });
 
-    // Get Product by category ID
-    categoryRouter.get('/products/:name', async (req, res) => {
+    // Get product that belong to a categories
+    categoryRouter.get('/products/:identifier', async (req, res) => {
         try {
-            const categoryNameOrId = req.params.name;
-    
-            const resolvedCategoryId = await resolveCategoryId(categoryNameOrId);
-    
-            if (!resolvedCategoryId) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Category '${categoryNameOrId}' not found`,
-                    data: []
-                });
-            }
-    
-            const categoryProducts = await categoryService.getById(resolvedCategoryId);
-    
-            return res.status(categoryProducts.code || 200).json(categoryProducts);
-    
-        } catch (error) {
-            console.error('Error getting category products:', error);
-            return res.status(500).json({
-                success: false,
-                message: 'Internal server error',
+          const { identifier } = req.params;
+          const { page = 1, limit = 20, sort = '-createdAt' } = req.query;
+          
+          // Parse sorting parameters
+          const [sortField, sortDirection] = sort.startsWith('-') 
+            ? [sort.substring(1), -1] 
+            : [sort, 1];
+          
+          const resolvedCategoryId = await resolveCategoryId(identifier);
+          
+          if (!resolvedCategoryId) {
+            return res.status(404).json({
+              success: false,
+              message: `Category '${identifier}' not found`,
+              data: []
             });
+          }
+          
+          const categoryProducts = await categoryService.getById(resolvedCategoryId, {
+            page: parseInt(page, 10),
+            limit: parseInt(limit, 10),
+            sortField,
+            sortOrder: sortDirection
+          });
+          
+          return res.status(categoryProducts.code || 200).json(categoryProducts);
+        } catch (error) {
+          console.error('Error getting category products:', error);
+          return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+          });
         }
     });
+      
 
     // Update category
     categoryRouter.patch('/:id', Middleware.authRequired(), async (req, res) => {
