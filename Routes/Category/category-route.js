@@ -22,7 +22,7 @@ export const categoryRoute = (router) => {
     });
 
     // Get product that belong to a categories
-    categoryRouter.get('/products/:identifier', async (req, res) => {
+    categoryRouter.get('/:identifier', async (req, res) => {
         try {
           const { identifier } = req.params;
           const { page = 1, limit = 20, sort = '-createdAt' } = req.query;
@@ -58,16 +58,15 @@ export const categoryRoute = (router) => {
           });
         }
     });
-      
 
     // Update category
-    categoryRouter.patch('/:id', Middleware.authRequired(), async (req, res) => {
+    categoryRouter.patch('/update/:id', Middleware.jwtDecodeToken(), async (req, res) => {
         const result = await categoryService.update(req.params.id, req.body);
         return res.status(result.code || 200).json(result);
     });
 
     // Delete category
-    categoryRouter.delete('/:id', Middleware.authRequired(), async (req, res) => {
+    categoryRouter.delete('/:id', Middleware.jwtDecodeToken(), async (req, res) => {
         const result = await categoryService.delete(req.params.id);
         return res.status(result.code || 200).json(result);
     });

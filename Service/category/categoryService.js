@@ -50,17 +50,13 @@ const categoryService = {
       const sortField = options.sortField || 'createdAt';
       const sortOrder = options.sortOrder || -1;
       
-      // Build sort object
       const sort = { [sortField]: sortOrder };
       
-      // Check if category exists first to avoid unnecessary product queries
       const categoryExists = await Category.exists({ _id: categoryId });
       if (!categoryExists) {
         return { success: false, error: 'Category not found', code: 404 };
       }
 
-      // Use lean() for better performance when you don't need Mongoose document features
-      // Removed .cache() function that was causing the error
       const products = await Product.find({ category: categoryId })
         .select('name price images status stock slug')
         .sort(sort)
@@ -68,7 +64,6 @@ const categoryService = {
         .limit(limit)
         .lean();
 
-      // Get total count for pagination in a separate query
       const totalCount = await Product.countDocuments({ category: categoryId });
       
       return { 
@@ -85,7 +80,6 @@ const categoryService = {
     } catch (error) {
       console.error('Error fetching category products:', error);
       
-      // More specific error handling
       if (error.name === 'MongoServerError') {
         return { success: false, error: 'Database error occurred', code: 500 };
       }

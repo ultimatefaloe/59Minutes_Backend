@@ -22,7 +22,8 @@ const categorySchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
     trim: true
-  }
+  },
+  products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
 }, { 
   timestamps: true,
   toJSON: { virtuals: true },
