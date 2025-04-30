@@ -8,15 +8,24 @@ const vendorService = {
     // Create a new vendor
     create: async (vendorData) => {
         try {
-            const { businessName, businessDescription, businessPhoneNumber, businessEmail, businessPassword } = vendorData;
+            const { businessName, businessDescription, businessPhoneNumber, businessEmail, businessPassword, agreeToTerms } = vendorData;
     
             if (!businessName || !businessDescription || !businessPhoneNumber || !businessEmail || !businessPassword) {
                 return { 
                     success: false, 
-                    error: 'Missing required fields: businessName, businessDescription, businessPhoneNumber, businessEmail, or businessPassword',
+                    error: 'Missing required fields',
                     code: 400
                 };
             }
+
+            if(!agreeToTerms){
+                return{
+                    success: false,
+                    error: 'Agree to the terms and condition',
+                    code: 400
+                }
+            }
+
             const hashedPassword = await bcrypt.hash(businessPassword, 10);
             vendorData.businessPassword = hashedPassword;
 

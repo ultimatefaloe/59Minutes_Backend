@@ -14,6 +14,13 @@ const vendorSchema = new mongoose.Schema({
     country: { type: String, default: 'Nigeria' },
     postalCode: String,
   },
+  businessAddress2: {
+    street: String,
+    city: String,
+    state: String,
+    country: { type: String, default: 'Nigeria' },
+    postalCode: String,
+  },
   taxId: { type: String },
   bankDetails: {
     accountName: String,

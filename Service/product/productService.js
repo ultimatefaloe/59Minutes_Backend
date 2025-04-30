@@ -111,40 +111,43 @@ const productService = {
     // List products with pagination, filtering and sorting
     list: async ({ 
         page = 1, 
-        limit = 10, 
+        limit = 0, // 0 = return all documents
         sort = '-createdAt', 
         search = '',
         category = null,
         minPrice = 0,
         maxPrice = Infinity,
         status = 'published'
-    }) => {
+        } = {}) => {
         try {
             const query = {
-                status,
                 price: { $gte: minPrice, $lte: maxPrice }
             };
-
+    
+            if (status) {
+                query.status = status;
+            }
+    
             if (category) {
                 query.category = category;
             }
-
+    
             if (search) {
                 query.$text = { $search: search };
             }
-
+    
             const options = {
                 page: parseInt(page),
-                limit: parseInt(limit),
+                limit: parseInt(limit), // If limit = 0, mongoose-paginate returns all
                 sort,
                 populate: [
                     { path: 'category', select: 'name' },
                     { path: 'vendor', select: 'name' }
                 ]
             };
-
+    
             const products = await Product.paginate(query, options);
-
+    
             return { 
                 success: true, 
                 data: {
@@ -159,7 +162,7 @@ const productService = {
             return { success: false, error: error.message, code: 500 };
         }
     },
-
+    
     // Search products by text
     search: async (searchTerm, limit = 25) => {
         try {
