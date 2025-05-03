@@ -32,6 +32,23 @@ const productSchema = new mongoose.Schema({
   tags: [{ type: String }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
+}, {
+  toJSON: {
+    virtuals: true,
+    versionKey: false,  // Optionally remove the __v field
+    transform: (doc, ret) => {
+      ret.id = ret._id.toString();  // Convert _id to id
+      delete ret._id;  // Optionally remove _id from the returned object
+    }
+  },
+  toObject: {
+    virtuals: true,
+    versionKey: false,  // Optionally remove the __v field
+    transform: (doc, ret) => {
+      ret.id = ret._id.toString();  // Convert _id to id
+      delete ret._id;  // Optionally remove _id from the returned object
+    }
+  }
 });
 
 productSchema.index({ name: 'text', description: 'text' });

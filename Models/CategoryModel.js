@@ -1,4 +1,3 @@
-
 import mongoose from 'mongoose';
 
 const categorySchema = new mongoose.Schema({
@@ -26,10 +25,25 @@ const categorySchema = new mongoose.Schema({
   products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
 }, { 
   timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
+  toJSON: {
+    virtuals: true,
+    versionKey: false,
+    transform: (doc, ret) => {
+      ret.id = ret._id.toString();
+      delete ret._id;
+    }
+  },
+  toObject: {
+    virtuals: true,
+    versionKey: false,
+    transform: (doc, ret) => {
+      ret.id = ret._id.toString();
+      delete ret._id;
+    }
+  }
 });
 
+// Virtual field for counting products
 categorySchema.virtual('productCount', {
   ref: 'Product',
   localField: '_id',
@@ -37,9 +51,13 @@ categorySchema.virtual('productCount', {
   count: true
 });
 
+// Auto-generate slug from name
 categorySchema.pre('save', function(next) {
   if (this.isModified('name')) {
-    this.slug = this.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    this.slug = this.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')   // Replace non-alphanumeric with dashes
+      .replace(/^-+|-+$/g, '');      // Trim leading/trailing dashes
   }
   next();
 });

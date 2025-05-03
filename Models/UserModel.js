@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 const userSchema = new mongoose.Schema({
   uid: {type: String, required: true},
   displayName: { type: String, required: true },
-  // lastName: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String },
   phoneNumber: { type: String },
@@ -32,6 +31,15 @@ const userSchema = new mongoose.Schema({
   accountStatus: { type: String, enum: ['active', 'suspended', 'banned'], default: 'active' },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
+}, {
+  toJSON: {
+    virtuals: true,
+    transform: (doc, ret) => {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+    }
+  }
 });
 
 const User = mongoose.model('User', userSchema);

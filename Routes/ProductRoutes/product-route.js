@@ -47,14 +47,9 @@ export const productRoute = (router) => {
                 });
             }
 
-            if (response) {
-                response.id = response._id.toString();
-                delete response._id;
-            }
-
             const newProduct = response.data;
-    
-            // Add product to vendor’s list
+            
+            // Add product to vendor's list
             await Vendor.findByIdAndUpdate(
                 vendorId,
                 { $push: { products: newProduct._id } },
@@ -79,16 +74,11 @@ export const productRoute = (router) => {
     productRouter.get('/:id', async (req, res) => {
         try {
             const response = await productService.getById(req.params.id);
-
-            if (response) {
-                response.id = response._id.toString();
-                delete response._id;
-            }
-
+            
             if (!response.success) {
-                return res.status(response.code).json({
+                return res.status(response.code || 404).json({
                     success: false,
-                    message: response.error
+                    message: response.error || 'Product not found'
                 });
             }
 
@@ -133,10 +123,10 @@ export const productRoute = (router) => {
                     req.body.category = categoryDoc._id;
                 }
             }
-
-            console.log(req.body.category)
     
-            delete req.body.vendor;
+            // Create a copy without vendor to prevent overwriting vendor field
+            const updateData = {...req.body};
+            delete updateData.vendor;
     
             const productResult = await productService.getById(productId);
             if (!productResult.success) {
@@ -155,17 +145,12 @@ export const productRoute = (router) => {
                 });
             }
     
-            const response = await productService.update(productId, req.body);
+            const response = await productService.update(productId, updateData);
             if (!response.success) {
                 return res.status(response.code || 400).json({
                     success: false,
                     message: response.error || 'Failed to update product'
                 });
-            }
-            
-            if (response) {
-                response.id = response._id.toString();
-                delete response._id;
             }
 
             return res.status(200).json({
@@ -209,11 +194,6 @@ export const productRoute = (router) => {
     
             const response = await productService.delete(productId);
     
-            if (response) {
-                response.id = response._id.toString();
-                delete response._id;
-            }
-
             if (!response.success) {
                 return res.status(response.code || 400).json({
                     success: false,
@@ -229,7 +209,7 @@ export const productRoute = (router) => {
     
             return res.status(200).json({
                 success: true,
-                message: response.data.message || 'Product deleted and vendor updated successfully',
+                message: response.data?.message || 'Product deleted successfully',
             });
     
         } catch (error) {
@@ -246,15 +226,10 @@ export const productRoute = (router) => {
         try {
             const response = await productService.list(req.query);
 
-            if (response) {
-                response.id = response._id.toString();
-                delete response._id;
-            }
-
             if (!response.success) {
-                return res.status(response.code).json({
+                return res.status(response.code || 400).json({
                     success: false,
-                    message: response.error
+                    message: response.error || 'Failed to fetch products'
                 });
             }
 
@@ -276,16 +251,11 @@ export const productRoute = (router) => {
     productRouter.get('/search/:term', async (req, res) => {
         try {
             const response = await productService.search(req.params.term);
-
-            if (response) {
-                response.id = response._id.toString();
-                delete response._id;
-            }
             
             if (!response.success) {
-                return res.status(response.code).json({
+                return res.status(response.code || 400).json({
                     success: false,
-                    message: response.error
+                    message: response.error || 'Search failed'
                 });
             }
 
@@ -307,16 +277,11 @@ export const productRoute = (router) => {
     productRouter.get('/vendor/:vendorId', Middleware.jwtDecodeToken(), async (req, res) => {
         try {
             const response = await productService.getByVendor(req.params.vendorId);
-
-            if (response) {
-                response.id = response._id.toString();
-                delete response._id;
-            }
             
             if (!response.success) {
-                return res.status(response.code).json({
+                return res.status(response.code || 400).json({
                     success: false,
-                    message: response.error
+                    message: response.error || 'Failed to fetch vendor products'
                 });
             }
 
