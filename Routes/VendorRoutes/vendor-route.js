@@ -77,7 +77,12 @@ export const vendorRoute = (router) => {
                     message: response.error || 'Vendor sign up failed',
                 });
             }
-    
+
+            if (response.data) {
+              response.data.id = response.data._id.toString();
+              delete response.data._id;
+            }
+            
             const token = Middleware.generateToken(response.data);
 
             try {
@@ -127,6 +132,12 @@ export const vendorRoute = (router) => {
               message: response.error || 'Invalid email or password',
             });
           }
+
+          if (response.data) {
+            response.data.id = response.data._id.toString();
+            delete response.data._id;
+          }
+          
       
           const { vendor, token } = response.data;
       
@@ -140,7 +151,11 @@ export const vendorRoute = (router) => {
                 new Date().toLocaleString(),
                 req.ip // Include IP address
               )
-            });
+            });if (result) {
+              result.id = result._id.toString(); // add `id`
+              delete result._id;                 // remove `_id` if you want
+            }
+            
           
             if (!emailStatus?.ok) {
               console.warn('⚠️ Login alert email failed to send:', emailStatus);
@@ -173,6 +188,12 @@ export const vendorRoute = (router) => {
     vendorRouter.get('/:id', async (req, res) => {
         try {
             const response = await vendorService.get(req.params.id);
+            
+            if (response) {
+              response.id = response._id.toString();
+              delete response._id;
+            }
+            
             return res.status(response.code || 200).json(response);
         } catch (e) {
             console.error('Error fetching vendor ', e);
@@ -184,6 +205,12 @@ export const vendorRoute = (router) => {
     vendorRouter.put('/:id', Middleware.jwtDecodeToken(), async (req, res) => {
         try {
             const response = await vendorService.update(req.params.id, req.body);
+
+            if (response) {
+              response.id = response._id.toString();
+              delete response._id;
+            }
+
             return res.status(response.code || 200).json(response);
         } catch (e) {
             console.error('Error updating vendor ', e);
@@ -195,6 +222,12 @@ export const vendorRoute = (router) => {
     vendorRouter.delete('/:id', Middleware.jwtDecodeToken(), async (req, res) => {
         try {
             const response = await vendorService.delete(req.params.id);
+
+            if (response) {
+              response.id = response._id.toString();
+              delete response._id;
+            }
+
             return res.status(response.code || 200).json(response);
         } catch (e) {
             console.error('Error deleting vendor ', e);
@@ -206,6 +239,12 @@ export const vendorRoute = (router) => {
     vendorRouter.get('/', async (req, res) => {
         try {
             const response = await vendorService.list(req.query);
+
+            if (response) {
+              response.id = response._id.toString();
+              delete response._id;
+            }
+
             return res.status(response.code || 200).json(response);
         } catch (e) {
             console.error('Error listing vendors ', e);
@@ -218,6 +257,12 @@ export const vendorRoute = (router) => {
         try {
             const { status, adminId } = req.body;
             const response = await vendorService.verify(req.params.id, status, adminId);
+
+            if (response) {
+              response.id = response._id.toString();
+              delete response._id;
+            }
+            
             return res.status(response.code || 200).json(response);
         } catch (e) {
             console.error('Error verifying vendor ', e);
@@ -229,6 +274,12 @@ export const vendorRoute = (router) => {
     vendorRouter.get('/stats/:vendorId', async (req, res) => {
         try {
             const response = await vendorService.getStats(req.params.vendorId);
+
+            if (response) {
+              response.id = response._id.toString();
+              delete response._id;
+            }
+            
             return res.status(response.code || 200).json(response);
         } catch (e) {
             console.error('Error getting vendor stats ', e);

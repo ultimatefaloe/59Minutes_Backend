@@ -46,7 +46,12 @@ export const productRoute = (router) => {
                     message: response.error || 'Failed to add product',
                 });
             }
-    
+
+            if (response) {
+                response.id = response._id.toString();
+                delete response._id;
+            }
+
             const newProduct = response.data;
     
             // Add product to vendor’s list
@@ -74,6 +79,11 @@ export const productRoute = (router) => {
     productRouter.get('/:id', async (req, res) => {
         try {
             const response = await productService.getById(req.params.id);
+
+            if (response) {
+                response.id = response._id.toString();
+                delete response._id;
+            }
 
             if (!response.success) {
                 return res.status(response.code).json({
@@ -152,7 +162,12 @@ export const productRoute = (router) => {
                     message: response.error || 'Failed to update product'
                 });
             }
-    
+            
+            if (response) {
+                response.id = response._id.toString();
+                delete response._id;
+            }
+
             return res.status(200).json({
                 success: true,
                 message: 'Product updated successfully',
@@ -194,6 +209,11 @@ export const productRoute = (router) => {
     
             const response = await productService.delete(productId);
     
+            if (response) {
+                response.id = response._id.toString();
+                delete response._id;
+            }
+
             if (!response.success) {
                 return res.status(response.code || 400).json({
                     success: false,
@@ -226,6 +246,11 @@ export const productRoute = (router) => {
         try {
             const response = await productService.list(req.query);
 
+            if (response) {
+                response.id = response._id.toString();
+                delete response._id;
+            }
+
             if (!response.success) {
                 return res.status(response.code).json({
                     success: false,
@@ -252,6 +277,11 @@ export const productRoute = (router) => {
         try {
             const response = await productService.search(req.params.term);
 
+            if (response) {
+                response.id = response._id.toString();
+                delete response._id;
+            }
+            
             if (!response.success) {
                 return res.status(response.code).json({
                     success: false,
@@ -278,6 +308,11 @@ export const productRoute = (router) => {
         try {
             const response = await productService.getByVendor(req.params.vendorId);
 
+            if (response) {
+                response.id = response._id.toString();
+                delete response._id;
+            }
+            
             if (!response.success) {
                 return res.status(response.code).json({
                     success: false,
