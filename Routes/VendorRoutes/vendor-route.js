@@ -181,8 +181,7 @@ export const vendorRoute = (router) => {
             error: err.message,
           });
         }
-      });
-      
+    });
     
     // GET vendor by ID
     vendorRouter.get('/:id', async (req, res) => {
@@ -218,6 +217,18 @@ export const vendorRoute = (router) => {
         }
     });
 
+
+    // forget passowrd
+    vendorRouter.patch('/:email', async (req, res) => {
+      try {
+        const forgot_password = await vendorService.forgetPassword()
+      } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+          message: 'Internal server error'
+        })
+      }
+    })
     // DELETE (soft delete) vendor
     vendorRouter.delete('/:id', Middleware.jwtDecodeToken(), async (req, res) => {
         try {

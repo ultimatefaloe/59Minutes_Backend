@@ -131,13 +131,16 @@ const vendorService = {
     },
 
     // Update vendor
-    update: async (id, updateData) => {
+    update: async (email, updateData) => {
         try {
             if (!mongoose.Types.ObjectId.isValid(id)) {
                 return { success: false, error: 'Invalid vendor ID', code: 400 };
             }
 
             // Prevent certain fields from being updated
+            if (updateData.businessPassword ){
+                delete updateData.businessPassword
+            };
             delete updateData._id;
             delete updateData.createdAt;
             delete updateData.verificationStatus; // Special permissions needed for this
@@ -161,6 +164,40 @@ const vendorService = {
                 code: error.code === 11000 ? 409 : 400 
             };
         }
+    },
+
+    // forget password
+    forgetPassword: async (id, password, verification_token){
+        try {
+
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return { success: false, error: 'Invalid vendor ID', code: 400 };
+            }
+
+            const businessPassword = await bcrypt.hash(password, 10);
+
+            const resetPassword = await Vendor.findByIdAndUpdate(
+                id,
+                { ...businessPassword, updatedAt: Date.now() },
+                {new: true, runValidators: true}
+            )
+
+            if(!resetPassword){
+                return res.status(404).json({
+                    message: 'Invalid vendor ID',
+                    success: false,
+                })
+            }
+
+        } catch (error) {
+            console.error('Error updating password:', error);
+            return { 
+                success: false, 
+                error: error.message,
+                code: error.code === 11000 ? 409 : 400 
+            };
+        }
+        
     },
 
     // Delete vendor (soft delete)
