@@ -2,6 +2,7 @@ import express from "express";
 import vendorService from "../../Service/vendor/vendorService.js";
 import Middleware from '../../Middleware/middleware.js';
 import { sendEmail } from '../../utils/mailer.js'
+import Vendor from "../../Models/VendorModel.js";
 
 const vendorRouter = express.Router();
 
@@ -218,14 +219,28 @@ export const vendorRoute = (router) => {
     });
 
 
-    // forget passowrd
-    vendorRouter.patch('/:email', async (req, res) => {
+    // password reset token
+    vendorRouter.post('/reset-request', async (req, res) => {
+      const { email } = req.body
       try {
-        const forgot_password = await vendorService.forgetPassword()
+        const token = await vendorService.resetToken(email);
+
+        return res.status(200).json({ token })
       } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-          message: 'Internal server error'
+        return res.status(400).json({
+          message: error
+        })
+      }
+    })
+
+    // Password reset 
+    vendorRouter.patch('/reset-password', async (req, res) => {
+      try {
+        const response = await Vendor.resetpassword(req.body)
+        return res.status(200).json({ reponse })
+      } catch (error) {
+        return res.status(400).json({
+          message: error
         })
       }
     })

@@ -2,6 +2,7 @@ import Vendor from '../../Models/VendorModel.js';
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import Middleware from '../../Middleware/middleware.js';
+import { sendEmail } from '../../utils/mailer.js';
 
 
 const vendorService = {
@@ -166,28 +167,46 @@ const vendorService = {
         }
     },
 
-    // forget password
-    forgetPassword: async (id, password, verification_token){
+    // Password reset token 
+    resetToken: async ( email ) => {
+
         try {
 
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-                return { success: false, error: 'Invalid vendor ID', code: 400 };
-            }
+            const vendor = await Vendor.findOne({businessEmail: email});
 
-            const businessPassword = await bcrypt.hash(password, 10);
+            if(!vendor) throw new Error('Vendor not found');
 
-            const resetPassword = await Vendor.findByIdAndUpdate(
-                id,
-                { ...businessPassword, updatedAt: Date.now() },
-                {new: true, runValidators: true}
-            )
+            const token = Math.floor(100000 + Math.random() * 900000).toString();
+            const tokenExpires = new Date(Date.now() + 15 * 60 * 1000);
 
-            if(!resetPassword){
-                return res.status(404).json({
-                    message: 'Invalid vendor ID',
-                    success: false,
+            vendor.resetToken = token;
+            vendor.resetTokenExpires = tokenExpires;
+            vendor.save();
+
+            const tokenHTML = `
+                <div>>img src'' width='100%'></div>
+                <div>
+                    Your password reset code is: <br/>
+                    <span style="color:Yellow;font-size:28px;background-color:black">${token}</span>
+                    <p>valid till ${tokenExpires}</p>
+                </div>
+            `
+            try {
+                const emailStatus = await sendEmail({
+                to: email,
+                subject: 'Password reset verification code',
+                    html: tokenHTML,
                 })
+
+                if (!emailStatus).accepted.length{
+                    console.warn('Failed to send verification code: ', emailStatus)
+                }
+
+            } catch (mailErr) {
+                console.error('Error sending verification code', mailErr);
             }
+
+            return { message: `Code sent to ${email}`}
 
         } catch (error) {
             console.error('Error updating password:', error);
@@ -198,6 +217,35 @@ const vendorService = {
             };
         }
         
+    },
+
+    //forget password reset
+    resetpassword: async ( data ) => {
+        const {email, newPassword, token } = data
+
+        try {
+            const vendor =  await Vendor.findOne({businessEmail: email});
+
+            if(!vendor) throw new Error('Invalid vendor email')
+
+            const isExpired = !vendor.resetTokenExpires || vendor.resetTokenExpires > Date.now();
+
+            if (token !== vendor.resetToken || isExpired){
+                throw new Error('Invalid or expired code')
+            };
+
+            const hashedPassword = await bcrypt.hash(newPassword, 10)
+
+            vendor.businessPassword = hashedPassword;
+            vendor.resetToken = undefined;
+            vendor.resetTokenExpires = undefined;
+            await vendor.save()
+
+            return {message: 'Password has been reset successfully'};
+        } catch (error) {
+            
+        }
+
     },
 
     // Delete vendor (soft delete)

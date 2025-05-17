@@ -32,7 +32,9 @@ const vendorSchema = new mongoose.Schema({
   verificationStatus: { type: String, enum: ['pending', 'verified', 'rejected'], default: 'pending' },
   products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: { type: Date, default: Date.now },
+  resetToken: { type: String },
+  resetTokenExpires: { type: Date }
 }, {
   toJSON: {
     virtuals: true,
