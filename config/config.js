@@ -4,10 +4,10 @@ import { config } from 'dotenv';
 config();
 
 export default {
-    port: process.env.PORT || 4000,
+    port: process.env.PORT,
 
     api: {
-        routes: `/api`,
+        routes: `/api/v1`,
     },
 
     switch: {

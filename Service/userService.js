@@ -1,4 +1,4 @@
-import User from '../../Models/UserModel.js';
+import User from '../Models/UserModel.js';
 import mongoose from 'mongoose';
 
 export default {

@@ -1,8 +1,8 @@
 import express from "express";
-import vendorService from "../../Service/vendor/vendorService.js";
-import Middleware from '../../Middleware/middleware.js';
-import { sendEmail } from '../../utils/mailer.js'
-import { rateLimiter } from '../../utils/rateLimiter.js'
+import vendorService from "../Service/vendorService.js";
+import Middleware from '../Middleware/middleware.js';
+import { sendEmail } from '../utils/mailer.js'
+import { rateLimiter } from '../utils/rateLimiter.js'
 // import Vendor from "../../Models/VendorModel.js";
 
 const vendorRouter = express.Router();
@@ -65,7 +65,7 @@ const signupHTML = (vendorName, loginTime) => `
 `;
 
 export const vendorRoute = (router) => {
-    router.use('/vendor', vendorRouter);
+    router.use('/vendors', vendorRouter);
 
     // Sign Up vendor
     vendorRouter.post('/signup', async (req, res) => {

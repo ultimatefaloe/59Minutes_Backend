@@ -1,11 +1,11 @@
 import express from 'express';
-import userService from '../../Service/user/userService.js';
-import Middleware from '../../Middleware/middleware.js';
+import userService from '../Service/userService.js';
+import Middleware from '../Middleware/middleware.js';
 
 export const userRoutes = (router) => {
     const userRouter = express();
 
-    router.use('/user', userRouter);
+    router.use('/users', userRouter);
 
     userRouter.post('/signup', Middleware.authRequired(), async (req, res, next) => {
         try {

@@ -1,13 +1,13 @@
 import express from 'express';
-import categoryService from '../../Service/category/categoryService.js';
-import Middleware from '../../Middleware/middleware.js';
-import { resolveCategoryId } from '../../utils/resolveCategoryId.js';
+import categoryService from '../Service/categoryService.js';
+import Middleware from '../Middleware/middleware.js';
+import { resolveCategoryId } from '../utils/resolveCategoryId.js';
 
 const categoryRouter = express.Router();
 
 export const categoryRoute = (router) => {
 
-    router.use('/category', categoryRouter);
+    router.use('/categories', categoryRouter);
 
     // Create category
     categoryRouter.post('/add-category', Middleware.jwtDecodeToken(), async (req, res) => {

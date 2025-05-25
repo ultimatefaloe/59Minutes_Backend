@@ -1,10 +1,10 @@
 import express from 'express';
 import config from '../config/config.js';
-import { defaultRoutes } from './defaultRoutes.js';
-import { userRoutes } from './UserRoutes/userRoute.js';
-import { productRoute } from './ProductRoutes/product-route.js';
-import { vendorRoute } from './VendorRoutes/vendor-route.js';
-import { categoryRoute } from './Category/category-route.js';
+import { defaultRoutes } from './default.routes.js';
+import { userRoutes } from './user.routes.js';
+import { productRoute } from './product.routes.js';
+import { vendorRoute } from './vendor.routes.js';
+import { categoryRoute } from './category.routes.js';
 
 export default () => {
     const router = express.Router();

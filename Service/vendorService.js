@@ -1,10 +1,10 @@
-import Vendor from '../../Models/VendorModel.js';
+import Vendor from '../Models/VendorModel.js';
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto'
-import Middleware from '../../Middleware/middleware.js';
-import { sendEmail } from '../../utils/mailer.js';
-import { passwordValidator } from '../../utils/passwordValidator.js';
+import Middleware from '../Middleware/middleware.js';
+import { sendEmail } from '../utils/mailer.js';
+import { passwordValidator } from '../utils/passwordValidator.js';
 
 
 const vendorService = {

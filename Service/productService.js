@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
-import Product from '../../Models/ProductModel.js';
-import Category from '../../Models/CategoryModel.js';
-import Review from '../../Models/ReviewModel.js'
+import Product from '../Models/ProductModel.js';
+import Category from '../Models/CategoryModel.js';
+import Review from '../Models/ReviewModel.js'
 const productService = {
     // Create a new product
     create: async (productData) => {

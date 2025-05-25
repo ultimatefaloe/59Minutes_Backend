@@ -1,10 +1,10 @@
 import express from 'express';
-import productService from '../../Service/product/productService.js';
-import Middleware from '../../Middleware/middleware.js';
-import Vendor from '../../Models/VendorModel.js';
-import Category from '../../Models/CategoryModel.js';
+import productService from '../Service/productService.js';
+import Middleware from '../Middleware/middleware.js';
+import Vendor from '../Models/VendorModel.js';
+import Category from '../Models/CategoryModel.js';
 import mongoose from 'mongoose';
-import { resolveCategoryId } from '../../utils/resolveCategoryId.js';
+import { resolveCategoryId } from '../utils/resolveCategoryId.js';
 
 const productRouter = express.Router();
 
