@@ -1,8 +1,10 @@
 import Vendor from '../../Models/VendorModel.js';
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto'
 import Middleware from '../../Middleware/middleware.js';
 import { sendEmail } from '../../utils/mailer.js';
+import { passwordValidator } from '../../utils/passwordValidator.js';
 
 
 const vendorService = {
@@ -176,62 +178,77 @@ const vendorService = {
 
             if(!vendor) throw new Error('Vendor not found');
 
-            const token = Math.floor(100000 + Math.random() * 900000).toString();
+            // const token = crypto.randomBytes(3).toString('hex');
+            const rawToken = crypto.randomInt(100000, 999999).toString();
             const tokenExpires = new Date(Date.now() + 15 * 60 * 1000);
 
-            vendor.resetToken = token;
+            const hashedToken = await crypto.createHash('sha256').update(rawToken).digest('hex')
+
+            vendor.resetToken = hashedToken;
             vendor.resetTokenExpires = tokenExpires;
-            vendor.save();
+            await vendor.save();
 
             const tokenHTML = `
-                <div>>img src'' width='100%'></div>
+                <div>>img src='' width='100%' /></div>
                 <div>
                     Your password reset code is: <br/>
-                    <span style="color:Yellow;font-size:28px;background-color:black">${token}</span>
-                    <p>valid till ${tokenExpires}</p>
+                    <span style="color:Yellow;font-size:28px;background-color:black">${rawToken}</span>
+                    <p>valid till ${tokenExpires.toLocaleString}</p>
                 </div>
             `
             try {
                 const emailStatus = await sendEmail({
-                to: email,
-                subject: 'Password reset verification code',
+                    to: email,
+                    subject: 'Password reset verification code',
                     html: tokenHTML,
                 })
 
-                if (!emailStatus).accepted.length{
-                    console.warn('Failed to send verification code: ', emailStatus)
-                }
+                if (!emailStatus?.accepted?.length){
+                    console.warn('Failed to send verification code: ', emailStatus);
+                    return{code: 400, success: false, message: 'Failed to send verification code'}
+                };
+
+                return {code: 200, success: true, message: 'Token sent successfully'}
 
             } catch (mailErr) {
                 console.error('Error sending verification code', mailErr);
+                return {code: 500, success: false, message: 'Error sending verification code'}
             }
 
-            return { message: `Code sent to ${email}`}
-
         } catch (error) {
-            console.error('Error updating password:', error);
+            console.error('internal error:', error);
             return { 
                 success: false, 
                 error: error.message,
-                code: error.code === 11000 ? 409 : 400 
+                code: error.code === 11000 ? 409 : 400
             };
         }
         
     },
 
     //forget password reset
-    resetpassword: async ( data ) => {
-        const {email, newPassword, token } = data
+    resetpassword: async ( email, newPassword, token ) => {
 
         try {
+            
+            validatePassword(newPassword);
+
             const vendor =  await Vendor.findOne({businessEmail: email});
 
-            if(!vendor) throw new Error('Invalid vendor email')
+            if(vendor.resetBlockedUntil && new Date() < vendor.resetBlockedUntil){
+                return { code: 400, success: false, meaasge: 'Too many attempts, try again later.'}
+            }
 
-            const isExpired = !vendor.resetTokenExpires || vendor.resetTokenExpires > Date.now();
+            if(!vendor) return { code: 400, success: false, message: 'Email not found'}
 
-            if (token !== vendor.resetToken || isExpired){
-                throw new Error('Invalid or expired code')
+            const hashedToken = await crypto.createHash('sha256').update(token).digest('hex');
+            if (!vendor.resetToken || vendor.resetToken !== hashedToken || new Date() > new Date(vendor.resetTokenExpires)){
+                vendor.invalidResetAttempts = (vendor.invalidResetAttempts || 0) + 1;
+
+                if(vendor.invalidResetAttempts >= 5){
+                    vendor.resetBlockedUntil = new Date(Date.now() + 30 * 60 * 1000);
+                };
+                return {code: 400, success: false, message: 'Invalid or expired code'}
             };
 
             const hashedPassword = await bcrypt.hash(newPassword, 10)
@@ -239,11 +256,17 @@ const vendorService = {
             vendor.businessPassword = hashedPassword;
             vendor.resetToken = undefined;
             vendor.resetTokenExpires = undefined;
+            vendor.passwordChangedAt = new Date();
             await vendor.save()
 
-            return {message: 'Password has been reset successfully'};
+            return { code: 200, success: true, message: 'Password has been reset successfully' };
         } catch (error) {
-            
+            console.error('internal Error:', error);
+            return { 
+                success: false, 
+                error: error.message,
+                code: error.code === 11000 ? 409 : 400 
+            };
         }
 
     },

@@ -1,6 +1,8 @@
 import admin from '../config/firebase-config.js';
 import jwt from 'jsonwebtoken';
+import config from '../config/config.js';
 
+const { JWT_PRIVATE_KEY } = config.jwt
 class Middleware {
 
   decodeToken() {
@@ -64,7 +66,7 @@ class Middleware {
       const token = authHeader.split(' ')[1];
 
       try {
-        const decoded = jwt.verify(token, process.env.JWT_PRIVATE_KEY);
+        const decoded = jwt.verify(token, JWT_PRIVATE_KEY);
         req.user = decoded; // Attach decoded data (like userId, role, etc.) to request
         next();
       } catch (err) {

@@ -33,8 +33,11 @@ const vendorSchema = new mongoose.Schema({
   products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-  resetToken: { type: String },
-  resetTokenExpires: { type: Date }
+  resetToken: { type: String, default: undefined} ,
+  resetTokenExpires: { type: Date, default: undefined },
+  invalidResetAttempts: { type: Number, default: 0 },
+  resetBlockedUntil: { type: Date },
+  passwordChangedAt: { type: Date}
 }, {
   toJSON: {
     virtuals: true,

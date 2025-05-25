@@ -2,7 +2,8 @@ import express from "express";
 import vendorService from "../../Service/vendor/vendorService.js";
 import Middleware from '../../Middleware/middleware.js';
 import { sendEmail } from '../../utils/mailer.js'
-import Vendor from "../../Models/VendorModel.js";
+import { rateLimiter } from '../../utils/rateLimiter.js'
+// import Vendor from "../../Models/VendorModel.js";
 
 const vendorRouter = express.Router();
 
@@ -88,9 +89,9 @@ export const vendorRoute = (router) => {
 
             try {
               const emailStatus = await sendEmail({
-                to: vendor.businessEmail,
+                to: vendorData.businessEmail,
                 subject: `🔔 Login Alert - ${new Date().toLocaleString()}`,
-                html: signupHTML(vendor.businessName, new Date().toLocaleString()),
+                html: signupHTML(vendorData.businessName, new Date().toLocaleString()),
               });
         
               if (!emailStatus?.accepted?.length) {
@@ -135,7 +136,8 @@ export const vendorRoute = (router) => {
           }
 
           if (response.data) {
-            response.data.id = response.data._id.toString();
+            response.data.id = response.data._id
+            ;
             delete response.data._id;
           }
           
@@ -201,7 +203,7 @@ export const vendorRoute = (router) => {
         }
     });
 
-    // UPDATE vendo()r
+    // UPDATE vendor
     vendorRouter.put('/:id', Middleware.jwtDecodeToken(), async (req, res) => {
         try {
             const response = await vendorService.update(req.params.id, req.body);
@@ -218,28 +220,41 @@ export const vendorRoute = (router) => {
         }
     });
 
-
     // password reset token
-    vendorRouter.post('/reset-request', async (req, res) => {
+    vendorRouter.post('/reset-request', rateLimiter, async (req, res) => {
       const { email } = req.body
+
+      if(!email) return res.status(400).json({success: false, message:'Email is required'})
+
       try {
         const token = await vendorService.resetToken(email);
 
+        if(token.code === 400){
+          return res.status(400).json({message: 'Failed to send verification code'})
+        }
         return res.status(200).json({ token })
       } catch (error) {
-        return res.status(400).json({
+        return res.status(500).json({
           message: error
         })
       }
-    })
+    });
 
     // Password reset 
     vendorRouter.patch('/reset-password', async (req, res) => {
+      const {email, newpassword, token } = req.body
+
+      if(!email || !newpassword || !token) return res.status(400).json({meaasge: 'All input field are required'});
+
       try {
-        const response = await Vendor.resetpassword(req.body)
-        return res.status(200).json({ reponse })
+        const response = await vendorService.resetpassword( email, newpassword, token )
+
+        if(response.code === 400) return res.status(400).json({ success: false, message: response.message || 'Failed to reset password, try again'});
+
+        return res.status(200).json({ response })
+
       } catch (error) {
-        return res.status(400).json({
+        return res.status(500).json({
           message: error
         })
       }

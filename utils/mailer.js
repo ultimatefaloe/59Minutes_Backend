@@ -1,36 +1,36 @@
 import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
-dotenv.config();
+import config from '../config/config.js';
 
-
+const { SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_PORT, SMTP_SECURE, FROM_EMAIL, FROM_NAME} = config.mail
+const { NODE_ENV } = config.env
 // Configure transporter with additional safety checks
 const getTransporterConfig = () => {
   // Validate required environment variables
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
     console.table({
-      Host: process.env.SMTP_HOST,
-      User: process.env.SMTP_USER,
-      Pass: process.env.SMTP_PASS
+      Host: SMTP_HOST,
+      User: SMTP_USER,
+      Pass: SMTP_PASS
     })
     throw new Error('Missing required SMTP environment variables');
   }
 
   return {
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_SECURE === 'true',
+    host: SMTP_HOST,
+    port: Number(SMTP_PORT) || 587,
+    secure: SMTP_SECURE === 'true',
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
+      user: SMTP_USER,
+      pass: SMTP_PASS
     },
     connectionTimeout: 10000, // 10 seconds
     greetingTimeout: 5000,    // 5 seconds
-    ...(process.env.NODE_ENV === 'development' && {
+    ...(NODE_ENV === 'development' && {
       logger: true,
       debug: true
     }),
     tls: {
-      rejectUnauthorized: process.env.NODE_ENV === 'production',
+      rejectUnauthorized: NODE_ENV === 'production',
       minVersion: 'TLSv1.2'
     }
   };
@@ -59,7 +59,7 @@ export const sendEmail = async ({ to, subject, html, text }) => {
 
     // Prepare email content
     const mailOptions = {
-      from: `"${process.env.FROM_NAME || '59Minutes'}" <${process.env.FROM_EMAIL}>`,
+      from: `"${FROM_NAME || '59Minutes'}" <${FROM_EMAIL}>`,
       to,
       subject,
       html,
