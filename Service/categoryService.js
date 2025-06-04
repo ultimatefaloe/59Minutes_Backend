@@ -28,14 +28,27 @@ const categoryService = {
   // Get all categories
   list: async () => {
     try {
+      // 1. Get all categories
       const categories = await Category.find().sort('name');
-      return { success: true, data: categories };
+
+      // 2. For each category, count the number of products
+      const categoryData = await Promise.all(categories.map(async (category) => {
+        const count = await Product.countDocuments({ category: category._id });
+        return {
+          id: category._id.toString(),
+          name: category.name,
+          description: category.description,
+          productCount: count
+        };
+      }));
+
+      return { success: true, data: categoryData };
+
     } catch (error) {
       console.error('Error listing categories:', error);
       return { success: false, error: error.message, code: 500 };
     }
   },
-
   // Get product using categories
   getById: async (categoryId, options = {}) => {
     try {
