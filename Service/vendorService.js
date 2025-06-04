@@ -46,17 +46,14 @@ const vendorService = {
             const newVendor = new Vendor(vendorData);
             const savedVendor = await newVendor.save();
 
-            const safeVendor = savedVendor.map(vendor => {
-                const vendorObj = vendor.toObject();
-                return {
-                    id: vendorObj._id.toString(),
-                    businessName: vendorObj.businessName,
-                    businessDescription: vendorObj.businessDescription,
-                    businessPhoneNumber: vendorObj.businessPhoneNumber,
-                    businessEmail: vendorObj.businessEmail,
+            const safeVendor = {
+                    id: savedVendor._id.toString(),
+                    businessName: savedVendor.businessName,
+                    businessDescription: savedVendor.businessDescription,
+                    businessPhoneNumber: savedVendor.businessPhoneNumber,
+                    businessEmail: savedVendor.businessEmail,
                     // Add other fields as needed
                 };
-            });
     
             return { 
                 success: true,
@@ -110,17 +107,14 @@ const vendorService = {
             // Generate JWT token
             const token = Middleware.generateToken(vendor);
 
-            const safeVendor = vendor.map(vendor => {
-                const vendorObj = vendor.toObject();
-                return {
-                    id: vendorObj._id.toString(),
-                    businessName: vendorObj.businessName,
-                    businessDescription: vendorObj.businessDescription,
-                    businessPhoneNumber: vendorObj.businessPhoneNumber,
-                    businessEmail: vendorObj.businessEmail,
+            const safeVendor = {
+                    id: vendor._id.toString(),
+                    businessName: vendor.businessName,
+                    businessDescription: vendor.businessDescription,
+                    businessPhoneNumber: vendor.businessPhoneNumber,
+                    businessEmail: vendor.businessEmail,
                     // Add other fields as needed
                 };
-            });
             return {
                 success: true,
                 data: { token, safeVendor }
@@ -149,15 +143,13 @@ const vendorService = {
             if (!vendor) {
                 return { success: false, error: 'Vendor not found', code: 404 };
             }
-            const safeVendor = vendor.map(vendor => {
-                const vendorObj = vendor.toObject();
-                return {
-                    id: vendorObj._id.toString(),
-                    businessName: vendorObj.businessName,
-                    businessDescription: vendorObj.businessDescription,
-                    businessPhoneNumber: vendorObj.businessPhoneNumber,
-                    businessEmail: vendorObj.businessEmail,
-                    products: vendorObj.products.map(product => ({
+            const safeVendor = {
+                    id: vendor._id.toString(),
+                    businessName: vendor.businessName,
+                    businessDescription: vendor.businessDescription,
+                    businessPhoneNumber: vendor.businessPhoneNumber,
+                    businessEmail: vendor.businessEmail,
+                    products: vendor.products.map(product => ({
                         id: product._id.toString(),
                         name: product.name,
                         price: product.price,
@@ -165,7 +157,6 @@ const vendorService = {
                     })),
                     // Add other fields as needed
                 };
-            });
             
             return { success: true, data: safeVendor };
         } catch (error) {
@@ -199,17 +190,14 @@ const vendorService = {
                 return { success: false, error: 'Vendor not found', code: 404 };
             }
 
-            const safeVendors = updatedVendor.map(vendor => {
-                const vendorObj = vendor.toObject();
-                return {
-                    id: vendorObj._id.toString(),
-                    businessName: vendorObj.businessName,
-                    businessDescription: vendorObj.businessDescription,
-                    businessPhoneNumber: vendorObj.businessPhoneNumber,
-                    businessEmail: vendorObj.businessEmail,
+            const safeVendors = {
+                    id: updatedVendor._id.toString(),
+                    businessName: updatedVendor.businessName,
+                    businessDescription: updatedVendor.businessDescription,
+                    businessPhoneNumber: updatedVendor.businessPhoneNumber,
+                    businessEmail: updatedVendor.businessEmail,
                     // Add other fields as needed
                 };
-            });
 
             return { success: true, data: safeVendors };
         } catch (error) {
@@ -349,17 +337,19 @@ const vendorService = {
     },
 
     // List vendors with pagination and filtering
-    list: async ({ 
-        page = 1, 
-        limit = 10, 
+
+     list: async ({
+        page = 1,
+        limit = 10,
         sort = '-createdAt',
-        status = 'active',
+        verificationStatus = 'verified', // default to pending
         verified = null,
         search = ''
-    }) => {
+        } = {}) => {
         try {
-            const query = { status };
-            
+            // 🔍 Build query filters
+            const query = { verificationStatus };
+
             if (verified !== null) {
                 query.verificationStatus = verified ? 'verified' : { $ne: 'verified' };
             }
@@ -371,6 +361,7 @@ const vendorService = {
                 ];
             }
 
+            // ⚙️ Pagination & Population
             const options = {
                 page: parseInt(page),
                 limit: parseInt(limit),
@@ -378,43 +369,48 @@ const vendorService = {
                 populate: {
                     path: 'products',
                     select: 'name price images status',
-                    match: { status: 'published' }
+                    match: { status: 'published' } // Only include draft products
                 }
             };
 
+            // ✅ Paginate with query and options
             const vendors = await Vendor.paginate(query, options);
-            console.log('Vendors:', vendors);
 
-            const safeVendors = vendors.docs.map(vendor => {
+            // 🔁 Format output
+            const formatted = vendors.docs.map(vendor => {
                 const vendorObj = vendor.toObject();
-                return {
-                    id: vendorObj._id.toString(),
-                    businessName: vendorObj.businessName,
-                    businessDescription: vendorObj.businessDescription,
-                    businessPhoneNumber: vendorObj.businessPhoneNumber,
-                    businessEmail: vendorObj.businessEmail,
-                    products: vendorObj.products?.map(product => ({
-                    id: product._id.toString(),
-                    name: product.name,
-                    price: product.price,
-                    images: product.images
-                    })) || []
-                    // Add other fields as needed
-                };
+                    return {
+                        id: vendorObj.id,
+                        businessName: vendorObj.businessName,
+                        businessDescription: vendorObj.businessDescription,
+                        businessPhoneNumber: vendorObj.businessPhoneNumber,
+                        businessEmail: vendorObj.businessEmail,
+                        hasProducts: Array.isArray(vendorObj.products) && vendorObj.products.length > 0,
+                        products: (vendorObj.products || []).map(product => ({
+                        id: product._id.toString(),
+                        name: product.name,
+                        price: product.price,
+                        images: product.images
+                        }))
+                    };
             });
 
-            return { 
-                success: true, 
+            return {
+                success: true,
                 data: {
-                    vendors: safeVendors,
-                    pages: vendors.totalPages,
+                    vendors: formatted,
                     total: vendors.totalDocs,
-                    page: vendors.page
+                    page: vendors.page,
+                    pages: vendors.totalPages
                 }
             };
         } catch (error) {
             console.error('Error listing vendors:', error);
-            return { success: false, error: error.message, code: 500 };
+            return {
+                success: false,
+                error: error.message,
+                code: 500
+            };
         }
     },
 

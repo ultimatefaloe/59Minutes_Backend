@@ -52,7 +52,6 @@ const vendorSchema = new mongoose.Schema({
 });
 
 vendorSchema.plugin(mongoosePaginate);
-
 const Vendor = mongoose.model('Vendor', vendorSchema);
 
 export default Vendor;

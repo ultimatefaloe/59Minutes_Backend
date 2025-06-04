@@ -5,6 +5,7 @@ import Vendor from '../Models/VendorModel.js';
 import Category from '../Models/CategoryModel.js';
 import mongoose from 'mongoose';
 import { resolveCategoryId } from '../utils/resolveCategoryId.js';
+import middleware from '../Middleware/middleware.js';
 
 const productRouter = express.Router();
 
@@ -12,7 +13,7 @@ export const productRoutes = (router) => {
     router.use('/products', productRouter);
 
     // Create Product
-    productRouter.post('/add-product/:vendorid', Middleware.jwtDecodeToken(), async (req, res) => {
+    productRouter.post('/add-product/:vendorid', middleware.jwtDecodeToken(), middleware.isVendor(), async (req, res) => {
         const vendorId = req.params.vendorid;
         const productData = { ...req.body, vendor: vendorId };
     
@@ -97,7 +98,7 @@ export const productRoutes = (router) => {
     });
 
     // Update Product
-    productRouter.patch('/edit/:id', Middleware.jwtDecodeToken(), async (req, res) => {
+    productRouter.patch('/edit/:id', middleware.jwtDecodeToken(), async (req, res) => {
         try {
             const productId = req.params.id;
             const vendorId = req.body.vendor;
@@ -169,7 +170,7 @@ export const productRoutes = (router) => {
     });
 
     // Delete Product
-    productRouter.delete('/:id', Middleware.jwtDecodeToken(), async (req, res) => {
+    productRouter.delete('/:id', middleware.jwtDecodeToken(), async (req, res) => {
         try {
             const productId = req.params.id;
             const vendorId = req.body.vendorId;
@@ -274,7 +275,7 @@ export const productRoutes = (router) => {
     });
 
     // Get Products by Vendor
-    productRouter.get('/vendor/:vendorId', Middleware.jwtDecodeToken(), async (req, res) => {
+    productRouter.get('/vendor/:vendorId', middleware.jwtDecodeToken(), async (req, res) => {
         try {
             const response = await productService.getByVendor(req.params.vendorId);
             

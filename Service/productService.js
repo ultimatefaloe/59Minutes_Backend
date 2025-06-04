@@ -72,6 +72,10 @@ const productService = {
                 { ...updateData, updatedAt: Date.now() },
                 { new: true, runValidators: true }
             );
+
+            await Vendor.findByIdAndUpdate(vendorId, {
+                $push: { products: updatedProduct._id }
+            });
     
             if (!updatedProduct) {
                 return { success: false, error: 'Product not found', code: 404 };
@@ -108,11 +112,11 @@ const productService = {
         }
     },
 
-    // List products with pagination, filtering and sorting
-    list: async ({ 
-        page = 1, 
-        limit = 0, // 0 = return all documents
-        sort = '-createdAt', 
+    //List all products with pagination, filtering, and sorting
+    list: async ({
+        page = 1,
+        limit = 10,
+        sort = '-createdAt',
         search = '',
         category = null,
         minPrice = 0,
@@ -121,47 +125,46 @@ const productService = {
         } = {}) => {
         try {
             const query = {
-                price: { $gte: minPrice, $lte: maxPrice }
+            price: { $gte: minPrice, $lte: maxPrice }
             };
-    
-            if (status) {
-                query.status = status;
-            }
-    
-            if (category) {
-                query.category = category;
-            }
-    
-            if (search) {
-                query.$text = { $search: search };
-            }
-    
+
+            if (status) query.status = status;
+            if (category) query.category = category;
+            if (search) query.$text = { $search: search };
+
+            console.log('Product Query:', query);
+
             const options = {
-                page: parseInt(page),
-                limit: parseInt(limit), // If limit = 0, mongoose-paginate returns all
-                sort,
-                populate: [
-                    { path: 'category', select: 'name' },
-                    { path: 'vendor', select: 'name' }
-                ]
+            page: parseInt(page),
+            limit: parseInt(limit) || 10,
+            sort,
+            populate: [
+                { path: 'category', select: 'name' },
+                { path: 'vendor', select: 'businessName' }
+            ]
             };
-    
+
             const products = await Product.paginate(query, options);
-    
-            return { 
-                success: true, 
-                data: {
-                    products: products.docs,
-                    total: products.totalDocs,
-                    pages: products.totalPages,
-                    page: products.page
-                }
+            
+            if (!products || products.docs.length === 0) {
+                return { success: false, error: 'No products found', code: 404 };
+            }
+            
+            return {
+            success: true,
+            data: {
+                products: products.docs,
+                total: products.totalDocs,
+                pages: products.totalPages,
+                page: products.page
+            }
             };
         } catch (error) {
             console.error('Error listing products:', error);
             return { success: false, error: error.message, code: 500 };
         }
     },
+
     
     // Search products by text
     search: async (searchTerm, limit = 25) => {
