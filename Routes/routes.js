@@ -2,15 +2,15 @@ import express from 'express';
 import config from '../config/config.js';
 import { defaultRoutes } from './default.routes.js';
 import { userRoutes } from './user.routes.js';
-import { productRoute } from './product.routes.js';
-import { vendorRoute } from './vendor.routes.js';
-import { categoryRoute } from './category.routes.js';
+import { productRoutes } from './product.routes.js';
+import { vendorRoutes } from './vendor.routes.js';
+import { categoryRoutes } from './category.routes.js';
 
 export default () => {
     const router = express.Router();
 
     if (config.switch.cat){
-        categoryRoute(router)
+        categoryRoutes(router)
     };
 
     if (config.switch.user){
@@ -18,11 +18,11 @@ export default () => {
     };
 
     if(config.switch.product){
-        productRoute(router)
+        productRoutes(router)
     };
 
     if(config.switch.vendor){
-        vendorRoute(router)
+        vendorRoutes(router)
     };
 
     if (config.switch.default){

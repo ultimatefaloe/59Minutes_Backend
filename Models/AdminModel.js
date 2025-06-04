@@ -12,7 +12,9 @@ const adminSchema = new mongoose.Schema({
   },
   lastAccess: { type: Date },
   createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: { type: Date, default: Date.now },
+  role: { type: String, enum: ['vendor', 'admin'], default: 'admin' },
+  
 });
 
 adminSchema.set('toJSON', {

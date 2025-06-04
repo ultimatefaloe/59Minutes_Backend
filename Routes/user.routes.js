@@ -36,7 +36,6 @@ export const userRoutes = (router) => {
         }
     });
       
-
     userRouter.get('/login/:email', Middleware.authRequired(), async (req, res, next) => {
         try {
             const email = req.user.email;

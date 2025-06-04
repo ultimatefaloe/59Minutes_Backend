@@ -1,5 +1,5 @@
 {
-  "name": "59MinutesPrint_backend",
+  "name": "59MinutesPrintbackend",
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
@@ -22,7 +22,7 @@
     "firebase-admin": "^13.2.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.12.1",
-    "mongoose-paginate-v2": "^1.9.0",
+    "mongoose-paginate-v2": "^1.9.1",
     "nodemailer": "^6.10.1",
     "nodemon": "^3.1.9",
     "paystack": "^2.0.1"

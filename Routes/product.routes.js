@@ -8,7 +8,7 @@ import { resolveCategoryId } from '../utils/resolveCategoryId.js';
 
 const productRouter = express.Router();
 
-export const productRoute = (router) => {
+export const productRoutes = (router) => {
     router.use('/products', productRouter);
 
     // Create Product

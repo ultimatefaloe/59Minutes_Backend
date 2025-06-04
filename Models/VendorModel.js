@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 
 const vendorSchema = new mongoose.Schema({
   businessName: { type: String, required: true },
@@ -37,7 +38,8 @@ const vendorSchema = new mongoose.Schema({
   resetTokenExpires: { type: Date, default: undefined },
   invalidResetAttempts: { type: Number, default: 0 },
   resetBlockedUntil: { type: Date },
-  passwordChangedAt: { type: Date}
+  passwordChangedAt: { type: Date},
+  role: { type: String, enum: ['vendor', 'admin'], default: 'vendor' },
 }, {
   toJSON: {
     virtuals: true,
@@ -48,6 +50,8 @@ const vendorSchema = new mongoose.Schema({
     }
   }
 });
+
+vendorSchema.plugin(mongoosePaginate);
 
 const Vendor = mongoose.model('Vendor', vendorSchema);
 

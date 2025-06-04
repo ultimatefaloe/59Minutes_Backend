@@ -45,10 +45,22 @@ const vendorService = {
             // Create new vendor
             const newVendor = new Vendor(vendorData);
             const savedVendor = await newVendor.save();
+
+            const safeVendor = savedVendor.map(vendor => {
+                const vendorObj = vendor.toObject();
+                return {
+                    id: vendorObj._id.toString(),
+                    businessName: vendorObj.businessName,
+                    businessDescription: vendorObj.businessDescription,
+                    businessPhoneNumber: vendorObj.businessPhoneNumber,
+                    businessEmail: vendorObj.businessEmail,
+                    // Add other fields as needed
+                };
+            });
     
             return { 
                 success: true,
-                data: savedVendor
+                data: safeVendor
             };
     
         } catch (error) {
@@ -84,6 +96,7 @@ const vendorService = {
                 };
             }
 
+            
             // Check if password matches
             const isMatch = await bcrypt.compare(businessPassword, vendor.businessPassword);
             if (!isMatch) {
@@ -97,9 +110,20 @@ const vendorService = {
             // Generate JWT token
             const token = Middleware.generateToken(vendor);
 
+            const safeVendor = vendor.map(vendor => {
+                const vendorObj = vendor.toObject();
+                return {
+                    id: vendorObj._id.toString(),
+                    businessName: vendorObj.businessName,
+                    businessDescription: vendorObj.businessDescription,
+                    businessPhoneNumber: vendorObj.businessPhoneNumber,
+                    businessEmail: vendorObj.businessEmail,
+                    // Add other fields as needed
+                };
+            });
             return {
                 success: true,
-                data: { token, vendor }
+                data: { token, safeVendor }
             };
 
         } catch (error) {
@@ -125,8 +149,25 @@ const vendorService = {
             if (!vendor) {
                 return { success: false, error: 'Vendor not found', code: 404 };
             }
+            const safeVendor = vendor.map(vendor => {
+                const vendorObj = vendor.toObject();
+                return {
+                    id: vendorObj._id.toString(),
+                    businessName: vendorObj.businessName,
+                    businessDescription: vendorObj.businessDescription,
+                    businessPhoneNumber: vendorObj.businessPhoneNumber,
+                    businessEmail: vendorObj.businessEmail,
+                    products: vendorObj.products.map(product => ({
+                        id: product._id.toString(),
+                        name: product.name,
+                        price: product.price,
+                        images: product.images
+                    })),
+                    // Add other fields as needed
+                };
+            });
             
-            return { success: true, data: vendor };
+            return { success: true, data: safeVendor };
         } catch (error) {
             console.error('Error fetching vendor:', error);
             return { success: false, error: error.message, code: 500 };
@@ -158,7 +199,19 @@ const vendorService = {
                 return { success: false, error: 'Vendor not found', code: 404 };
             }
 
-            return { success: true, data: updatedVendor };
+            const safeVendors = updatedVendor.map(vendor => {
+                const vendorObj = vendor.toObject();
+                return {
+                    id: vendorObj._id.toString(),
+                    businessName: vendorObj.businessName,
+                    businessDescription: vendorObj.businessDescription,
+                    businessPhoneNumber: vendorObj.businessPhoneNumber,
+                    businessEmail: vendorObj.businessEmail,
+                    // Add other fields as needed
+                };
+            });
+
+            return { success: true, data: safeVendors };
         } catch (error) {
             console.error('Error updating vendor:', error);
             return { 
@@ -330,13 +383,32 @@ const vendorService = {
             };
 
             const vendors = await Vendor.paginate(query, options);
+            console.log('Vendors:', vendors);
+
+            const safeVendors = vendors.docs.map(vendor => {
+                const vendorObj = vendor.toObject();
+                return {
+                    id: vendorObj._id.toString(),
+                    businessName: vendorObj.businessName,
+                    businessDescription: vendorObj.businessDescription,
+                    businessPhoneNumber: vendorObj.businessPhoneNumber,
+                    businessEmail: vendorObj.businessEmail,
+                    products: vendorObj.products?.map(product => ({
+                    id: product._id.toString(),
+                    name: product.name,
+                    price: product.price,
+                    images: product.images
+                    })) || []
+                    // Add other fields as needed
+                };
+            });
 
             return { 
                 success: true, 
                 data: {
-                    vendors: vendors.docs,
-                    total: vendors.totalDocs,
+                    vendors: safeVendors,
                     pages: vendors.totalPages,
+                    total: vendors.totalDocs,
                     page: vendors.page
                 }
             };

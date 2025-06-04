@@ -3,6 +3,7 @@ import vendorService from "../Service/vendorService.js";
 import Middleware from '../Middleware/middleware.js';
 import { sendEmail } from '../utils/mailer.js'
 import { rateLimiter } from '../utils/rateLimiter.js'
+import middleware from "../Middleware/middleware.js";
 // import Vendor from "../../Models/VendorModel.js";
 
 const vendorRouter = express.Router();
@@ -64,7 +65,7 @@ const signupHTML = (vendorName, loginTime) => `
 
 `;
 
-export const vendorRoute = (router) => {
+export const vendorRoutes = (router) => {
     router.use('/vendors', vendorRouter);
 
     // Sign Up vendor
@@ -187,8 +188,9 @@ export const vendorRoute = (router) => {
     });
     
     // GET vendor by ID
-    vendorRouter.get('/:id', async (req, res) => {
+    vendorRouter.get('/:id', middleware.jwtDecodeToken(), middleware.isVendor(),async (req, res) => {
         try {
+
             const response = await vendorService.get(req.params.id);
             
             if (response) {
@@ -204,8 +206,9 @@ export const vendorRoute = (router) => {
     });
 
     // UPDATE vendor
-    vendorRouter.put('/:id', Middleware.jwtDecodeToken(), async (req, res) => {
+    vendorRouter.put('/:id', Middleware.jwtDecodeToken(), middleware.isVendor(), async (req, res) => {
         try {
+
             const response = await vendorService.update(req.params.id, req.body);
 
             if (response) {
@@ -259,8 +262,9 @@ export const vendorRoute = (router) => {
         })
       }
     })
+
     // DELETE (soft delete) vendor
-    vendorRouter.delete('/:id', Middleware.jwtDecodeToken(), async (req, res) => {
+    vendorRouter.delete('/:id', Middleware.jwtDecodeToken(), middleware.isVendor(), async (req, res) => {
         try {
             const response = await vendorService.delete(req.params.id);
 
@@ -277,14 +281,9 @@ export const vendorRoute = (router) => {
     });
 
     // LIST vendors with filters and pagination
-    vendorRouter.get('/', async (req, res) => {
+    vendorRouter.get('/', middleware.jwtDecodeToken(), async (req, res) => {
         try {
-            const response = await vendorService.list(req.query);
-
-            if (response) {
-              response.id = response._id.toString();
-              delete response._id;
-            }
+            const response = await vendorService.list(req.query)
 
             return res.status(response.code || 200).json(response);
         } catch (e) {
@@ -294,7 +293,7 @@ export const vendorRoute = (router) => {
     });
 
     // VERIFY vendor (admin use)
-    vendorRouter.patch('/verify/:id', Middleware.jwtDecodeToken(), async (req, res) => {
+    vendorRouter.patch('/verify/:id', Middleware.jwtDecodeToken(), middleware.isAdmin(), async (req, res) => {
         try {
             const { status, adminId } = req.body;
             const response = await vendorService.verify(req.params.id, status, adminId);
@@ -312,7 +311,7 @@ export const vendorRoute = (router) => {
     });
 
     // GET vendor statistics
-    vendorRouter.get('/stats/:vendorId', async (req, res) => {
+    vendorRouter.get('/stats/:vendorId', middleware.jwtDecodeToken(), middleware.isVendor(), async (req, res) => {
         try {
             const response = await vendorService.getStats(req.params.vendorId);
 

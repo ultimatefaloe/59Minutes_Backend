@@ -75,13 +75,49 @@ class Middleware {
     };
   };
 
-  generateToken(user) {
+  generateToken(data) {
     return jwt.sign(
-      { id: user._id.toString(), role: user.role }, 
+      { id: data._id.toString(), role: data.role }, 
       process.env.JWT_PRIVATE_KEY,
       { expiresIn: '7d' }
     );
-}
+  };
+
+  isAdmin() {
+    return (req, res, next) => {
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. Admins only.',
+        });
+      }
+      next();
+    };
+  };
+
+  isVendor() {
+    return (req, res, next) => {
+      if (!req.user || req.user.role !== 'vendor' || req.user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. Vendors only.',
+        });
+      }
+      next();
+    };
+  };
+
+  isUser() {
+    return (req, res, next) => {
+      if (!req.user || req.user.role !== 'user') {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. Users only.',
+        });
+      }
+      next();
+    };
+  };
 
 
 }

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 
 const userSchema = new mongoose.Schema({
   uid: {type: String, required: true},
@@ -31,6 +32,7 @@ const userSchema = new mongoose.Schema({
   accountStatus: { type: String, enum: ['active', 'suspended', 'banned'], default: 'active' },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
+
 }, {
   toJSON: {
     virtuals: true,
@@ -42,6 +44,7 @@ const userSchema = new mongoose.Schema({
   }
 });
 
+userSchema.plugin(mongoosePaginate);
 const User = mongoose.model('User', userSchema);
 
 export default User;

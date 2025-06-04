@@ -5,7 +5,7 @@ import { resolveCategoryId } from '../utils/resolveCategoryId.js';
 
 const categoryRouter = express.Router();
 
-export const categoryRoute = (router) => {
+export const categoryRoutes = (router) => {
 
     router.use('/categories', categoryRouter);
 
