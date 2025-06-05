@@ -21,6 +21,19 @@ const productService = {
     
           const newProduct = new Product(productData);
           const savedProduct = await newProduct.save();
+
+          if (savedProduct.ok){
+
+            updateData = {
+                status: 'published',
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            };
+            await Product.findByIdAndUpdate(savedProduct._id || savedProduct.id, 
+                { ...updateData },
+                { new: true, runValidators: true }
+            )
+          }
           return { success: true, data: savedProduct };
         } catch (error) {
           console.error('Error creating product:', error);
