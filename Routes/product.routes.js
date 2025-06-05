@@ -1,6 +1,6 @@
 import express from 'express';
+import multer from 'multer';
 import productService from '../Service/productService.js';
-import Middleware from '../Middleware/middleware.js';
 import Vendor from '../Models/VendorModel.js';
 import Category from '../Models/CategoryModel.js';
 import mongoose from 'mongoose';
@@ -12,8 +12,10 @@ const productRouter = express.Router();
 export const productRoutes = (router) => {
     router.use('/products', productRouter);
 
+    const upload = multer();
+
     // Create Product
-    productRouter.post('/add-product/:vendorid', middleware.jwtDecodeToken(), middleware.isVendor(), async (req, res) => {
+    productRouter.post('/add-product/:vendorid', middleware.jwtDecodeToken(), middleware.isVendor(), upload.single('file'), async (req, res) => {
         const vendorId = req.params.vendorid;
         const productData = { ...req.body, vendor: vendorId };
     

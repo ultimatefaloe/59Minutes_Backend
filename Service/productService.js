@@ -7,6 +7,7 @@ const productService = {
     create: async (productData) => {
         try {
           // Validate required fields
+          console.log('Product Data:', productData);
           const requiredFields = ['name', 'description', 'price', 'category', 'vendor', 'stock'];
           for (const field of requiredFields) {
             if (!productData[field]) {
