@@ -69,7 +69,7 @@ export const vendorRoutes = (router) => {
     router.use('/vendors', vendorRouter);
 
     // Sign Up vendor
-    vendorRouter.post('/signup', async (req, res) => {
+    vendorRouter.post('/signup', rateLimiter, async (req, res) => {
         try {
             const vendorData = req.body;
             const response = await vendorService.create(vendorData);
@@ -115,7 +115,7 @@ export const vendorRoutes = (router) => {
         }
     });
 
-    vendorRouter.post('/login', async (req, res) => {
+    vendorRouter.post('/login', rateLimiter, async (req, res) => {
         try {
       
           const response = await vendorService.login(req.body);
@@ -226,7 +226,7 @@ export const vendorRoutes = (router) => {
     });
 
     // Password reset 
-    vendorRouter.patch('/reset-password', async (req, res) => {
+    vendorRouter.patch('/reset-password', rateLimiter, async (req, res) => {
       const {email, newpassword, token } = req.body
 
       if(!email || !newpassword || !token) return res.status(400).json({meaasge: 'All input field are required'});
