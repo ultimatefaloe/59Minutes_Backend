@@ -79,7 +79,7 @@ class Middleware {
     return jwt.sign(
       { id: data._id.toString(), role: data.role }, 
       process.env.JWT_PRIVATE_KEY,
-      { expiresIn: '7d' }
+      { expiresIn: '1d' }
     );
   };
 

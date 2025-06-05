@@ -52,6 +52,7 @@ const vendorService = {
                     businessDescription: savedVendor.businessDescription,
                     businessPhoneNumber: savedVendor.businessPhoneNumber,
                     businessEmail: savedVendor.businessEmail,
+                    role: savedVendor.role,
                     // Add other fields as needed
                 };
     
@@ -113,6 +114,7 @@ const vendorService = {
                     businessDescription: vendor.businessDescription,
                     businessPhoneNumber: vendor.businessPhoneNumber,
                     businessEmail: vendor.businessEmail,
+                    role: vendor.role,
                     // Add other fields as needed
                 };
             return {
@@ -380,7 +382,7 @@ const vendorService = {
             const formatted = vendors.docs.map(vendor => {
                 const vendorObj = vendor.toObject();
                     return {
-                        id: vendorObj.id,
+                        id: vendorObj._id.toString(),
                         businessName: vendorObj.businessName,
                         businessDescription: vendorObj.businessDescription,
                         businessPhoneNumber: vendorObj.businessPhoneNumber,
