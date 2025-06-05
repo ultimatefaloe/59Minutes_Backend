@@ -206,7 +206,6 @@ const productService = {
             }
 
             const products = await Product.find({ vendor: vendorId })
-                .select('name price images status stock')
                 .sort('-createdAt');
 
             return { success: true, data: products };

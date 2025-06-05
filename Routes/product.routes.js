@@ -277,7 +277,7 @@ export const productRoutes = (router) => {
     });
 
     // Get Products by Vendor
-    productRouter.get('/vendor/:vendorId', middleware.jwtDecodeToken(), async (req, res) => {
+    productRouter.get('/vendor/:vendorId', middleware.jwtDecodeToken(), middleware.isVendor(), async (req, res) => {
         try {
             const response = await productService.getByVendor(req.params.vendorId);
             
