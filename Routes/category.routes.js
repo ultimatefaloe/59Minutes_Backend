@@ -31,7 +31,8 @@ export const categoryRoutes = (router) => {
           const [sortField, sortDirection] = sort.startsWith('-') 
             ? [sort.substring(1), -1] 
             : [sort, 1];
-          
+                
+
           const resolvedCategoryId = await resolveCategoryId(identifier);
           
           if (!resolvedCategoryId) {

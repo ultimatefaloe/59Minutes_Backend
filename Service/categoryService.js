@@ -18,7 +18,13 @@ const categoryService = {
       const newCategory = new Category(data);
       const saved = await newCategory.save();
 
-      return { success: true, data: saved };
+      const cat = {
+        id: saved._id.toString(),
+        name: saved.name,
+        description: saved.description
+      }
+
+      return { success: true, data: cat };
     } catch (error) {
       console.error('Error creating category:', error);
       return { success: false, error: error.message, code: 500 };
@@ -77,11 +83,20 @@ const categoryService = {
         .limit(limit)
         .lean();
 
+        const safeProducts = products.map(product => ({
+          id: product._id.toString(),
+          name: product.name,
+          price: product.price,
+          images: product.images,
+          status: product.status,
+          stock: product.stock,
+        }));
+
       const totalCount = await Product.countDocuments({ category: categoryId });
       
       return { 
         success: true, 
-        data: products,
+        data: safeProducts,
         pagination: {
           total: totalCount,
           page,
@@ -117,7 +132,14 @@ const categoryService = {
         return { success: false, error: 'Category not found', code: 404 };
       }
 
-      return { success: true, data: updated };
+      const updatedCategory = {
+        id: updated._id.toString(),
+        name: updated.name,
+        description: updated.description
+      };
+
+
+      return { success: true, data: updatedCategory };
     } catch (error) {
       console.error('Error updating category:', error);
       return { success: false, error: error.message, code: 500 };
