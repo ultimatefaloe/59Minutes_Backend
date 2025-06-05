@@ -117,17 +117,8 @@ export const vendorRoutes = (router) => {
 
     vendorRouter.post('/login', async (req, res) => {
         try {
-          const { businessEmail, businessPassword } = req.body;
       
-          // Input validation
-          if (!businessEmail || !businessPassword) {
-            return res.status(400).json({
-              success: false,
-              message: 'Both email and password are required',
-            });
-          }
-      
-          const response = await vendorService.login({ businessEmail, businessPassword });
+          const response = await vendorService.login(req.body);
       
           if (!response.success) {
             return res.status(response.code || 401).json({
@@ -135,15 +126,6 @@ export const vendorRoutes = (router) => {
               message: response.error || 'Invalid email or password',
             });
           }
-
-          if (response.data) {
-            response.data.id = response.data._id
-            ;
-            delete response.data._id;
-          }
-          
-      
-          const { vendor, token } = response.data;
       
           // Attempt to send login alert email
           try {
@@ -165,19 +147,19 @@ export const vendorRoutes = (router) => {
               console.warn('⚠️ Login alert email failed to send:', emailStatus);
             }
           } catch (mailErr) {
-            console.error('❌ Error sending login alert email:', mailErr);
+            console.error('Error sending login alert email:', mailErr);
           }
           
       
           return res.status(200).json({
             success: true,
             message: 'Login successful',
-            token,
-            vendor,
+            token: response.data.token,
+            vendor: response.data.safeVendor
           });
       
         } catch (err) {
-          console.error('❌ Vendor login error:', err);
+          console.error('Vendor login error:', err);
       
           return res.status(500).json({
             success: false,
@@ -224,7 +206,7 @@ export const vendorRoutes = (router) => {
     });
 
     // password reset token
-    vendorRouter.post('/reset-request', rateLimiter, async (req, res) => {
+    vendorRouter.post('/reset-token', rateLimiter, async (req, res) => {
       const { email } = req.body
 
       if(!email) return res.status(400).json({success: false, message:'Email is required'})
