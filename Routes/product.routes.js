@@ -175,7 +175,7 @@ export const productRoutes = (router) => {
     productRouter.delete('/:id', middleware.jwtDecodeToken(), async (req, res) => {
         try {
             const productId = req.params.id;
-            const vendorId = req.body.vendorId;
+            const vendorId = req.user.id;
     
             const productResult = await productService.getById(productId);
     
