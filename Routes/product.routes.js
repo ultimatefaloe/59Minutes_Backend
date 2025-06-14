@@ -1,5 +1,4 @@
 import express from "express";
-import multer from "multer";
 import productService from "../Service/productService.js";
 import Vendor from "../Models/VendorModel.js";
 import Category from "../Models/CategoryModel.js";
@@ -12,8 +11,6 @@ const productRouter = express.Router();
 
 export const productRoutes = (router) => {
   router.use("/products", productRouter);
-
-  const upload = multer();
 
   // Create Product
   productRouter.post(

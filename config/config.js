@@ -1,5 +1,4 @@
 import { config } from 'dotenv';
-import cloudinary from './cloudinary';
 
 // Load environment variables from .env file
 config();
