@@ -1,4 +1,5 @@
 import { config } from 'dotenv';
+import cloudinary from './cloudinary';
 
 // Load environment variables from .env file
 config();
@@ -34,6 +35,12 @@ export default {
 
     jwt: {
         JWT_PRIVATE_KEY: process.env.JWT_PRIVATE_KEY
+    },
+
+    cloudinary: {
+        CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+        CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+        CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET
     },
 
     env: {

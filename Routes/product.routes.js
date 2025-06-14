@@ -6,6 +6,7 @@ import Category from "../Models/CategoryModel.js";
 import mongoose from "mongoose";
 import { resolveCategoryId } from "../utils/resolveCategoryId.js";
 import middleware from "../Middleware/middleware.js";
+import upload from "../Middleware/multerCloudinary.js";
 
 const productRouter = express.Router();
 
@@ -22,7 +23,11 @@ export const productRoutes = (router) => {
     upload.array("images", 5), // Accept multiple images
     async (req, res) => {
       const vendorId = req.params.vendorid;
-      const productData = { ...req.body, vendor: vendorId };
+      const productData = {
+         ...req.body, 
+         vendor: vendorId,
+         images: req.files.path
+        };
 
       try {
         // Check vendor exists
