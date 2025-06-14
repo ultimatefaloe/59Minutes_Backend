@@ -15,7 +15,7 @@ export const productRoutes = (router) => {
     const upload = multer();
 
     // Create Product
-    productRouter.post('/add-product/:vendorid', middleware.jwtDecodeToken(), middleware.isVendor(), upload.single('file'), async (req, res) => {
+    productRouter.post('/add-product/:vendorid', middleware.jwtDecodeToken(), middleware.isVendor(), upload.single('images'), async (req, res) => {
         const vendorId = req.params.vendorid;
         const productData = { ...req.body, vendor: vendorId };
     
