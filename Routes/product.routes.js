@@ -153,11 +153,11 @@ export const productRoutes = (router) => {
         );
         delete formData.category;
 
-        let newImages = product.data.images;
+        let newImages = product.images;
 
         if (req.files && req.files.length > 0) {
           newImages = await productService.updateCloudinaryImages(
-            product.data.images,
+            product.images,
             req.files
           );
         }
