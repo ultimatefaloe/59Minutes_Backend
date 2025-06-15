@@ -203,8 +203,6 @@ const productService = {
       if (category) query.category = category;
       if (search) query.$text = { $search: search };
 
-      console.log("Product Query:", query);
-
       const options = {
         page: parseInt(page),
         limit: parseInt(limit) || 10,
@@ -216,7 +214,7 @@ const productService = {
       };
 
       const products = await Product.paginate(query, options);
-
+      console.log(products)
       if (!products || products.docs.length === 0) {
         return { success: false, error: "No products found", code: 404 };
       }
