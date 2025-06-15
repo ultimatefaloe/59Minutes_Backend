@@ -120,6 +120,7 @@ export const productRoutes = (router) => {
     "/edit/:id",
     middleware.jwtDecodeToken(),
     middleware.isVendor(),
+    upload.array("images", 5), // Accept multiple images
     async (req, res) => {
       try {
         const productId = req.params.id;
@@ -166,7 +167,12 @@ export const productRoutes = (router) => {
           req.body.category = categoryDoc._id;
         }
 
-        const response = await productService.update(productId, req.body);
+        const updateData = {
+          ...req.body,
+          images: req.files
+        }
+
+        const response = await productService.update(productId, updateData);
         return res.status(response.success ? 200 : response.code || 400).json({
           success: response.success,
           message: response.success
