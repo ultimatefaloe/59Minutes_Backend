@@ -125,52 +125,39 @@ export const productRoutes = (router) => {
       try {
         const productId = req.params.id;
         const vendorId = req.user.id;
+        const formData = req.body
 
         const vendor = await Vendor.findById(vendorId);
         if (!vendor)
-          return res
-            .status(403)
-            .json({
-              success: false,
-              message: "Vendor not found or unauthorized",
-            });
+          return res.status(403).json({
+            success: false,
+            message: "Vendor not found or unauthorized",
+          });
 
         const productResult = await productService.getById(productId);
         if (!productResult.success)
           return res
             .status(404)
             .json({ success: false, message: "Product not found" });
-
         const product = productResult.data;
-        console.log(product.vendor._id)
+
         if (product.vendor._id.toString() !== vendor._id.toString()) {
-          return res
-            .status(403)
-            .json({
-              success: false,
-              message: "Permission denied to update this product",
-            });
+          return res.status(403).json({
+            success: false,
+            message: "Permission denied to update this product",
+          });
         }
 
-        if (
-          req.body.category &&
-          typeof req.body.category === "string" &&
-          !mongoose.Types.ObjectId.isValid(req.body.category)
-        ) {
-          const categoryDoc = await Category.findOne({
-            name: req.body.category,
-          });
-          if (!categoryDoc)
-            return res
-              .status(400)
-              .json({ success: false, message: "Category not found" });
-          req.body.category = categoryDoc._id;
-        }
+        const verifyCategory = await productService.categoryResolver(formData.category)
+        delete formData.category;
+
+        const imageUrl = await productService.updateCloudinaryImage(product.images, req.files)
 
         const updateData = {
-          ...req.body,
-          images: req.files
-        }
+          ...formData,
+          category: verifyCategory,
+          images: imageUrl,
+        };
 
         const response = await productService.update(productId, updateData);
         return res.status(response.success ? 200 : response.code || 400).json({
@@ -182,12 +169,10 @@ export const productRoutes = (router) => {
         });
       } catch (error) {
         console.error("Error updating product:", error);
-        return res
-          .status(500)
-          .json({
-            success: false,
-            message: error.message || "Internal server error",
-          });
+        return res.status(500).json({
+          success: false,
+          message: error.message || "Internal server error",
+        });
       }
     }
   );

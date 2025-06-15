@@ -107,6 +107,44 @@ const productService = {
     }
   },
 
+  updateCloudinaryImage: async (existingImage, filePath) => {
+    // Cloudinary image update
+    let imageUrl = existingImage; // fallback to old image
+    if (filePath) {
+      // 1. Delete old image from Cloudinary
+      const publicId = imageUrl?.split("/").pop().split(".")[0];
+      if (publicId) {
+        await cloudinary.uploader.destroy(`products/${publicId}`);
+      }
+
+      // 2. Upload new image to Cloudinary
+      const uploadResult = await cloudinary.uploader.upload(filePath.path, {
+        folder: "products",
+      });
+
+      imageUrl = uploadResult.secure_url;
+    }
+    return imageUrl;
+  },
+
+  categoryResolver: async (category) => {
+    if (
+      category &&
+      typeof category === "string" &&
+      !mongoose.Types.ObjectId.isValid(category)
+    ) {
+      const categoryDoc = await Category.findOne({
+        name: category,
+      });
+      if (!categoryDoc)
+        return res
+          .status(400)
+          .json({ success: false, message: "Category not found" });
+      category = categoryDoc._id;
+    }
+    return category
+  },
+
   // Delete product
   delete: async (id) => {
     try {
