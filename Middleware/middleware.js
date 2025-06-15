@@ -76,8 +76,7 @@ class Middleware {
         if (verifyUser.role !== decoded.role) {
           return res.status(403).json({ success: false, message: 'Access denied. Role mismatch.' });
         }
-
-        req.user = verifyUser; // Attach decoded data (like userId, role, etc.) to request
+        req.user = decoded; // Attach decoded data (like userId, role, etc.) to request
         next();
       } catch (err) {
         return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
