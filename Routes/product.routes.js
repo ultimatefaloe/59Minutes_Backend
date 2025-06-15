@@ -123,7 +123,7 @@ export const productRoutes = (router) => {
     async (req, res) => {
       try {
         const productId = req.params.id;
-        const vendorId = req.user.vendor.id;
+        const vendorId = req.user.id;
 
         const vendor = await Vendor.findById(vendorId);
         if (!vendor) {
