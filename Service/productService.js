@@ -4,10 +4,10 @@ import Category from "../Models/CategoryModel.js";
 import Review from "../Models/ReviewModel.js";
 const productService = {
   // Create a new product
-  create: async (productData) => {
+  create: async (product) => {
     try {
       // Validate required fields
-      console.log("Product Data:", productData);
+      console.log("Product Data:", product);
       const requiredFields = [
         "name",
         "description",
@@ -17,13 +17,22 @@ const productService = {
         "stock",
       ];
       for (const field of requiredFields) {
-        if (!productData[field]) {
+        if (!product[field]) {
           return {
             success: false,
             error: `Missing required field: ${field}`,
             code: 400,
           };
         }
+      }
+
+      const disAmount = (product.discountPercent/100 )*product.price
+
+      const discountPrice = product.price - disAmount
+
+      const productData = {
+        ...product,
+        discountPrice
       }
 
       const newProduct = new Product(productData);
