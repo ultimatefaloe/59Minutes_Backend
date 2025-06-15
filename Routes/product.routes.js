@@ -119,10 +119,11 @@ export const productRoutes = (router) => {
   productRouter.patch(
     "/edit/:id",
     middleware.jwtDecodeToken(),
+    middleware.isVendor(),
     async (req, res) => {
       try {
         const productId = req.params.id;
-        const vendorId = req.body.vendor;
+        const vendorId = req.user.vendor.id;
 
         const vendor = await Vendor.findById(vendorId);
         if (!vendor) {
