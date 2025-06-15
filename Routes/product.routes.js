@@ -125,7 +125,7 @@ export const productRoutes = (router) => {
       try {
         const productId = req.params.id;
         const vendorId = req.user.id;
-        const formData = req.body
+        const formData = req.body;
 
         const vendor = await Vendor.findById(vendorId);
         if (!vendor)
@@ -148,15 +148,23 @@ export const productRoutes = (router) => {
           });
         }
 
-        const verifyCategory = await productService.categoryResolver(formData.category)
+        const verifyCategory = await productService.categoryResolver(
+          formData.category
+        );
         delete formData.category;
 
-        const imageUrl = await productService.updateCloudinaryImage(product.images, req.files)
+        let newImages = product.data.images;
 
+        if (req.files && req.files.length > 0) {
+          newImages = await productService.updateCloudinaryImages(
+            product.data.images,
+            req.files
+          );
+        }
         const updateData = {
           ...formData,
           category: verifyCategory,
-          images: imageUrl,
+          images: newImages,
         };
 
         const response = await productService.update(productId, updateData);

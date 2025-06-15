@@ -107,24 +107,30 @@ const productService = {
     }
   },
 
-  updateCloudinaryImage: async (existingImage, filePath) => {
-    // Cloudinary image update
-    let imageUrl = existingImage; // fallback to old image
-    if (filePath) {
-      // 1. Delete old image from Cloudinary
-      const publicId = imageUrl?.split("/").pop().split(".")[0];
-      if (publicId) {
-        await cloudinary.uploader.destroy(`products/${publicId}`);
+  updateCloudinaryImages: async (existingImages = [], files = []) => {
+    try {
+      // Step 1: Delete all old images from Cloudinary
+      for (const imageUrl of existingImages) {
+        const publicId = imageUrl.split("/").pop().split(".")[0];
+        if (publicId) {
+          await cloudinary.uploader.destroy(`products/${publicId}`);
+        }
       }
 
-      // 2. Upload new image to Cloudinary
-      const uploadResult = await cloudinary.uploader.upload(filePath.path, {
-        folder: "products",
-      });
+      // Step 2: Upload new images to Cloudinary
+      const newImageUrls = [];
+      for (const file of files) {
+        const uploadResult = await cloudinary.uploader.upload(file.path, {
+          folder: "products",
+        });
+        newImageUrls.push(uploadResult.secure_url);
+      }
 
-      imageUrl = uploadResult.secure_url;
+      return newImageUrls;
+    } catch (error) {
+      console.error("Error updating Cloudinary images:", error);
+      return existingImages; // Fallback to old images on error
     }
-    return imageUrl;
   },
 
   categoryResolver: async (category) => {
@@ -142,7 +148,7 @@ const productService = {
           .json({ success: false, message: "Category not found" });
       category = categoryDoc._id;
     }
-    return category
+    return category;
   },
 
   // Delete product
