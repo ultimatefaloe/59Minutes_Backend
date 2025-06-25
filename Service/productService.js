@@ -70,7 +70,7 @@ const productService = {
 
       const product = await Product.findById(id)
         .populate("category", "_id name") // Populate full info
-        .populate("vendor", "_id name")
+        .populate("vendor", "_id businessName")
         .populate("reviews", "rating comment");
 
       if (!product) {

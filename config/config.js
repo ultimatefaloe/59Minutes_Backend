@@ -19,8 +19,7 @@ export default {
     },
 
     mongo: {
-        DB_USERNAME: process.env.DB_USERNAME,
-        DB_PASSWORD: process.env.DB_PASSWORD
+       MONGO_DB_URI: process.env.MONGO_DB_URI,
     },
 
     mail: {

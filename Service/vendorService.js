@@ -340,7 +340,7 @@ const vendorService = {
 
     // List vendors with pagination and filtering
 
-     list: async ({
+    list: async ({
         page = 1,
         limit = 10,
         sort = '-createdAt',
