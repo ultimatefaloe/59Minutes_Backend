@@ -3,7 +3,7 @@ import mongoosePaginate from "mongoose-paginate-v2";
 
 const userSchema = new mongoose.Schema({
   uid: {type: String, required: true},
-  displayName: { type: String, required: true },
+  fullName: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String },
   phoneNumber: { type: String },
