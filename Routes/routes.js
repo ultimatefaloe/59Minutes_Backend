@@ -5,7 +5,7 @@ import { userRoutes } from '../User/user.routes.js';
 import { productRoutes } from '../Product/product.routes.js';
 import { vendorRoutes } from '../Vendor/vendor.routes.js';
 import { categoryRoutes } from '../Category/category.routes.js';
-import authRoutes from '../Auth/auth.routes.js';
+import { authRoutes } from '../Auth/auth.routes.js';
 
 export default () => {
     const router = express.Router();

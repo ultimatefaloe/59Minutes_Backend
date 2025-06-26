@@ -1,13 +1,19 @@
 import { Router } from "express";
+import middleware from "../Middleware/middleware.js";
+import { rateLimiter } from "../utils/rateLimiter.js";
+import vendorService from "../Vendor/vendorService.js";
+import { sendEmail } from "../utils/mailer.js";
+import emailTemplates from "../utils/emailTemplates.js";
+import authService from "./authService.js";
 
-const authRouter = Router();
+export const authRoutes = (router) => {
+  const authRouter = Router();
 
-export default authRoutes = (router) => {
   router.use("/auth", authRouter);
 
   authRouter.post(
     "users/signup",
-    Middleware.authRequired(),
+    middleware.authRequired(),
     async (req, res, next) => {
       try {
         console.log("req.user:", req.user);
@@ -19,17 +25,37 @@ export default authRoutes = (router) => {
           return res.status(400).json({ message: "displayName is required." });
         }
 
-        const response = await userService.create(userdata);
+        const response = await authService.create(userdata);
 
         if (!response) {
           return res
             .status(400)
             .json({ message: "Sign up unsuccessful, try again!" });
         }
+        const token = middleware.generateToken(response);
+
+        try {
+          const emailStatus = await sendEmail({
+            to: vendorData.businessEmail,
+            subject: `🔔 Login Alert - ${new Date().toLocaleString()}`,
+            html: emailTemplates.signupHTML(
+              response.data.displayName,
+              new Date().toLocaleString(),
+              req.ip
+            ),
+          });
+
+          if (!emailStatus?.accepted?.length) {
+            console.warn("⚠️ Login alert email failed to send:", emailStatus);
+          }
+        } catch (mailErr) {
+          console.error("❌ Error sending login alert email:", mailErr);
+        }
 
         res.status(201).json({
           msg: "User signed up successfully",
           data: response,
+          token,
         });
       } catch (e) {
         console.error("Failed to sign up:", e.message);
@@ -42,7 +68,7 @@ export default authRoutes = (router) => {
 
   authRouter.get(
     "users/login/:email",
-    Middleware.authRequired(),
+    middleware.authRequired(),
     async (req, res, next) => {
       try {
         const email = req.user.email;
@@ -52,7 +78,7 @@ export default authRoutes = (router) => {
             message: "Invalid email format",
           });
         }
-        const response = await userService.getByEmail(email);
+        const response = await authService.getByEmail(email);
 
         if (!response) {
           return res.status(404).json({
@@ -78,7 +104,7 @@ export default authRoutes = (router) => {
       const id = req.params.id;
       const updateData = req.body;
 
-      const response = await userService.update(id, updateData);
+      const response = await authService.update(id, updateData);
 
       if (!response) {
         return res.status(400).json({
@@ -101,7 +127,7 @@ export default authRoutes = (router) => {
     try {
       const id = req.params.id;
 
-      const response = await userService.delete(id);
+      const response = await authService.delete(id);
 
       if (!response) {
         return res.status(400).json({
@@ -144,9 +170,10 @@ export default authRoutes = (router) => {
         const emailStatus = await sendEmail({
           to: vendorData.businessEmail,
           subject: `🔔 Login Alert - ${new Date().toLocaleString()}`,
-          html: signupHTML(
+          html: emailTemplates.signupHTML(
             vendorData.businessName,
-            new Date().toLocaleString()
+            new Date().toLocaleString(),
+            req.ip
           ),
         });
 
@@ -186,7 +213,7 @@ export default authRoutes = (router) => {
         const emailStatus = await sendEmail({
           to: vendor.businessEmail,
           subject: `🔔 Login Alert - ${new Date().toLocaleString()}`,
-          html: loginHTML(
+          html: emailTemplates.loginHTML(
             vendor.businessName,
             new Date().toLocaleString(),
             req.ip // Include IP address
