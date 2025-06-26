@@ -1,5 +1,5 @@
 import express from "express";
-import vendorService from "../Service/vendorService.js";
+import vendorService from "./vendorService.js";
 import Middleware from '../Middleware/middleware.js';
 import { sendEmail } from '../utils/mailer.js'
 import { rateLimiter } from '../utils/rateLimiter.js'
@@ -67,107 +67,6 @@ const signupHTML = (vendorName, loginTime) => `
 
 export const vendorRoutes = (router) => {
     router.use('/vendors', vendorRouter);
-
-    // Sign Up vendor
-    vendorRouter.post('/signup', rateLimiter, async (req, res) => {
-        try {
-            const vendorData = req.body;
-            const response = await vendorService.create(vendorData);
-    
-            if (!response.success) {
-                return res.status(response.code || 400).json({
-                    success: response.success,
-                    message: response.error || 'Vendor sign up failed',
-                });
-            }
-
-            if (response.data) {
-              response.data.id = response.data._id.toString();
-              delete response.data._id;
-            }
-            
-            const token = Middleware.generateToken(response.data);
-
-            try {
-              const emailStatus = await sendEmail({
-                to: vendorData.businessEmail,
-                subject: `🔔 Login Alert - ${new Date().toLocaleString()}`,
-                html: signupHTML(vendorData.businessName, new Date().toLocaleString()),
-              });
-        
-              if (!emailStatus?.accepted?.length) {
-                console.warn('⚠️ Login alert email failed to send:', emailStatus);
-              }
-            } catch (mailErr) {
-              console.error('❌ Error sending login alert email:', mailErr);
-            }
-    
-            return res.status(response.code || 201).json({
-                success: response.success,
-                message: 'Vendor signed up successfully',
-                token,
-                data: response.data
-            });
-    
-        } catch (e) {
-            console.error('Error creating vendor ', e);
-            return res.status(500).json({ message: 'Internal server error' });
-        }
-    });
-
-    vendorRouter.post('/login', rateLimiter, async (req, res) => {
-        try {
-      
-          const response = await vendorService.login(req.body);
-      
-          if (!response.success) {
-            return res.status(response.code || 401).json({
-              success: false,
-              message: response.error || 'Invalid email or password',
-            });
-          }
-      
-          // Attempt to send login alert email
-          try {
-            const emailStatus = await sendEmail({
-              to: vendor.businessEmail,
-              subject: `🔔 Login Alert - ${new Date().toLocaleString()}`,
-              html: loginHTML(
-                vendor.businessName,
-                new Date().toLocaleString(),
-                req.ip // Include IP address
-              )
-            });if (result) {
-              result.id = result._id.toString(); // add `id`
-              delete result._id;                 // remove `_id` if you want
-            }
-            
-          
-            if (!emailStatus?.ok) {
-              console.warn('⚠️ Login alert email failed to send:', emailStatus);
-            }
-          } catch (mailErr) {
-            console.error('Error sending login alert email:', mailErr);
-          }
-          
-      
-          return res.status(200).json({
-            success: true,
-            message: 'Login successful',
-            token: response.data.token,
-            vendor: response.data.safeVendor
-          });
-      
-        } catch (err) {
-          console.error('Vendor login error:', err);
-      
-          return res.status(500).json({
-            success: false,
-            message: 'Internal server error',
-            error: err.message,
-          });
-        }
-    });
     
     // GET vendor by ID
     vendorRouter.get('/:id', middleware.jwtDecodeToken(), middleware.isVendor(),async (req, res) => {

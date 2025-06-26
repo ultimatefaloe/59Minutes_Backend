@@ -1,5 +1,5 @@
 import express from "express";
-import productService from "../Service/productService.js";
+import productService from "./productService.js";
 import Vendor from "../Models/VendorModel.js";
 import Category from "../Models/CategoryModel.js";
 import mongoose from "mongoose";

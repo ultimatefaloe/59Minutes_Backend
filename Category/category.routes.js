@@ -1,5 +1,5 @@
 import express from 'express';
-import categoryService from '../Service/categoryService.js';
+import categoryService from './categoryService.js';
 import Middleware from '../Middleware/middleware.js';
 import { resolveCategoryId } from '../utils/resolveCategoryId.js';
 
