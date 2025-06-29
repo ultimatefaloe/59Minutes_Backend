@@ -1,6 +1,8 @@
 import express from "express";
 import { rateLimiter } from "../utils/rateLimiter.js";
 import authService from "./authService.js";
+import middleware from "../Middleware/middleware.js";
+import upload from "../Middleware/multerCloudinary.js";
 
 const authRouter = express.Router();
 
@@ -19,16 +21,16 @@ export const authRoutes = (router) => {
 
   authRouter.post("/users/login", async (req, res) => {
     try {
-      const result = await authService.userLogin(req.user.email);
+      const result = await authService.userLogin(req.body);
       res.status(result.code).json(result);
     } catch (error) {
       res.status(500).json({ message: error.message || "Internal server error" });
     }
   });
 
-  authRouter.patch("/users/forget-password/:id", async (req, res) => {
+  authRouter.patch("/users/forget-password/:id", middleware.authRequired(), async (req, res) => {
     try {
-      const result = await authService.updateUser(req.params.id, req.body);
+      const result = await authService.updateUser(req.params.id, req.user.id, req.body);
       res.status(result.code).json(result);
     } catch (error) {
       res.status(500).json({ message: error.message || "Internal server error" });
@@ -63,6 +65,25 @@ export const authRoutes = (router) => {
     }
   });
 
+  authRouter.post("/vendors/reset-token", async (req, res) => {
+    try {
+      const result = await authService.vendorResetToken(req.body.email);
+      res.status(result.code).json(result);
+    } catch (error) {
+      res.status(500).json({ message: error.message || "Internal server error" });
+    }
+  });
+
+  authRouter.patch("/vendors/forget-password", async (req, res) => {
+    try {
+      const result = await authService.vendorResetPassword(req.body);
+      res.status(result.code).json(result);
+    } catch (error) {
+      res.status(500).json({ message: error.message || "Internal server error" });
+    }
+  });
+
+  // Admin routes
   // Admin routes
   authRouter.post("/admin/signup", async (req, res) => {
     try {
@@ -101,11 +122,12 @@ export const authRoutes = (router) => {
   });
 
   // Delivery Agent routes
-  authRouter.post("/delivery-agent/signup", async (req, res) => {
+  authRouter.post("/delivery-agent/signup", upload.single("image"), async (req, res) => {
     try {
-      const result = await authService.deliveryAgentSignup(req.body, req.ip);
+      const result = await authService.deliveryAgentSignup(req.body, req.file?.path, req.ip);
       res.status(result.code).json(result);
     } catch (error) {
+      console.error("Error in delivery agent signup:", error);
       res.status(500).json({ message: error.message || "Internal server error" });
     }
   });
@@ -137,29 +159,16 @@ export const authRoutes = (router) => {
     }
   });
 
-  // Vendor password reset routes
-  authRouter.post("/vendors/reset-token", async (req, res) => {
-    try {
-      const result = await authService.vendorResetToken(req.body.email);
-      res.status(result.code).json(result);
-    } catch (error) {
-      res.status(500).json({ message: error.message || "Internal server error" });
-    }
-  });
-
-  authRouter.patch("/vendors/forget-password", async (req, res) => {
-    try {
-      const result = await authService.vendorResetPassword(req.body);
-      res.status(result.code).json(result);
-    } catch (error) {
-      res.status(500).json({ message: error.message || "Internal server error" });
-    }
-  });
+  
 
   // Token verification
   authRouter.post("/verify", async (req, res) => {
     try {
-      const result = await authService.verifyToken(req.headers["authorization"]);
+      const token = req.headers["authorization"].split(" ")[1]
+      if (!token) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const result = await authService.verifyToken(token);
       res.status(result.code).json(result);
     } catch (error) {
       res.status(500).json({ message: error.message || "Internal server error" });
@@ -169,7 +178,11 @@ export const authRoutes = (router) => {
   // Profile routes (for all user types)
   authRouter.get("/profile", async (req, res) => {
     try {
-      const result = await authService.getProfile(req.headers["authorization"]);
+      const token = req.headers["authorization"].split(" ")[1]
+      if (!token) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const result = await authService.getProfile(token);
       res.status(result.code).json(result);
     } catch (error) {
       res.status(500).json({ message: error.message || "Internal server error" });
@@ -178,7 +191,11 @@ export const authRoutes = (router) => {
 
   authRouter.patch("/profile", async (req, res) => {
     try {
-      const result = await authService.updateProfile(req.headers["authorization"], req.body);
+      const token = req.headers["authorization"].split(" ")[1]
+      if (!token) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const result = await authService.updateProfile(token, req.body);
       res.status(result.code).json(result);
     } catch (error) {
       res.status(500).json({ message: error.message || "Internal server error" });

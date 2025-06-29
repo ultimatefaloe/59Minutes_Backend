@@ -14,15 +14,16 @@ export const productRoutes = (router) => {
 
   // Create Product
   productRouter.post(
-    "/add-product/:vendorid",
+    "/create/:vendorid",
     middleware.jwtDecodeToken(),
     middleware.isVendor(),
     upload.array("images", 5), // Accept multiple images
     async (req, res) => {
+      console.log(req.user)
       const vendorId = req.params.vendorid;
       const productData = {
         ...req.body,
-        vendor: vendorId,
+        vendor: req.user.id,
         images: req.files.path,
       };
 

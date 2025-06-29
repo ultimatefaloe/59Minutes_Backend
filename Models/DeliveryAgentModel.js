@@ -26,7 +26,6 @@ const DeliveryAgentSchema = new mongoose.Schema(
       type: String,
       required: [true, "Password is required"],
       minlength: [8, "Password must be at least 8 characters long"],
-      select: false
     },
     phone: {
       type: String,
@@ -91,11 +90,11 @@ const DeliveryAgentSchema = new mongoose.Schema(
     },
     resetToken: {
       type: String,
-      select: false
+      // select: false
     },
     resetTokenExpires: {
       type: Date,
-      select: false
+      // select: false
     },
     invalidResetAttempts: {
       type: Number,
@@ -159,24 +158,6 @@ DeliveryAgentSchema.index({ email: 1 });
 DeliveryAgentSchema.index({ isAvailable: 1 });
 DeliveryAgentSchema.index({ verificationStatus: 1 });
 
-// Pre-save hook to hash password
-DeliveryAgentSchema.pre("save", async function(next) {
-  if (!this.isModified("password")) return next();
-
-  try {
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Method to compare passwords
-DeliveryAgentSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
-};
-
 // Method to check if password was changed after token was issued
 DeliveryAgentSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
   if (this.passwordChangedAt) {
@@ -185,20 +166,6 @@ DeliveryAgentSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
   }
   return false;
 };
-
-// Virtual for formatted agent info
-DeliveryAgentSchema.virtual("agentInfo").get(function() {
-  return {
-    id: this._id,
-    fullName: this.fullName,
-    email: this.email,
-    phone: this.phone,
-    vehicleType: this.vehicleType,
-    isAvailable: this.isAvailable,
-    ratings: this.ratings,
-    completedDeliveries: this.completedDeliveries
-  };
-});
 
 // Query helper for active agents
 DeliveryAgentSchema.query.active = function() {

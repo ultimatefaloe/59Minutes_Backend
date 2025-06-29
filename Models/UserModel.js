@@ -2,11 +2,11 @@ import mongoose from "mongoose";
 import mongoosePaginate from "mongoose-paginate-v2";
 
 const userSchema = new mongoose.Schema({
-  uid: {type: String, required: true},
+  // uid: {type: String, required: true},
   fullName: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String },
-  phoneNumber: { type: String },
+  phone: { type: String },
   avatar: { type: String },
   addresses: [{
     type: { type: String, enum: ['home', 'work', 'other'], default: 'home' },

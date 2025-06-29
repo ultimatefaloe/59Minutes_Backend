@@ -69,6 +69,7 @@ class Middleware {
       try {
         const decoded = jwt.verify(token, JWT_PRIVATE_KEY);
 
+        console.log('Decoded JWT:', decoded);
         const verifyUser = await Vendor.findById(decoded.id);
         if (!verifyUser) {
           return res.status(401).json({ success: false, message: 'Invalid token. User not found.' });
@@ -84,7 +85,26 @@ class Middleware {
     };
   };
 
-  generateToken(data) {
+  generateAdminToken(data) {
+    // Extract id from _id or id
+    const id = data.id || data._id;
+    const payload = {
+      id,
+      role: data.role,
+      adminName: data.adminName,
+      verificationStatus: data.verificationStatus,
+      permissions: data.permissions,
+      adminPhone: data.adminPhone,
+    };
+  
+    return jwt.sign(
+      payload,
+      process.env.JWT_PRIVATE_KEY,
+      { expiresIn: '1d' }
+    );
+  }
+
+  generateVendorToken(data) {
     // Extract id from _id or id
     const id = data.id || data._id;
     const payload = {
@@ -102,6 +122,26 @@ class Middleware {
       { expiresIn: '1d' }
     );
   }
+
+  generateUserToken(data) {
+    // Extract id from _id or id
+    const id = data.id || data._id;
+    const payload = {
+      id,
+      role: data.role,
+      email: data.email,
+      verificationStatus: data.verificationStatus,
+      fullNam: data.fullName,
+      phone: data.phone,
+    };
+  
+    return jwt.sign(
+      payload,
+      process.env.JWT_PRIVATE_KEY,
+      { expiresIn: '1d' }
+    );
+  }
+
 
   isAdmin() {
     return (req, res, next) => {

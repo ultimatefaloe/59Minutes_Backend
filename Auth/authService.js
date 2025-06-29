@@ -9,8 +9,10 @@ import jwt from "jsonwebtoken";
 import middleware from "../Middleware/middleware.js";
 import { sendEmail } from "../utils/mailer.js";
 import emailTemplates from "../utils/emailTemplates.js";
+import config from "../config/config.js";
+// import { auth } from "firebase-admin";
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = config.jwt.JWT_PRIVATE_KEY;
 
 const createSafeUserObject = (user, userType) => {
   const baseObject = {
@@ -21,7 +23,7 @@ const createSafeUserObject = (user, userType) => {
   };
 
   switch (userType) {
-    case 'user':
+    case "user":
       return {
         ...baseObject,
         fullName: user.fullName,
@@ -29,7 +31,7 @@ const createSafeUserObject = (user, userType) => {
         phone: user.phone,
         address: user.address,
       };
-    case 'vendor':
+    case "vendor":
       return {
         ...baseObject,
         businessName: user.businessName,
@@ -39,7 +41,7 @@ const createSafeUserObject = (user, userType) => {
         businessAddress: user.businessAddress,
         verificationStatus: user.verificationStatus,
       };
-    case 'admin':
+    case "admin":
       return {
         ...baseObject,
         fullName: user.fullName,
@@ -47,7 +49,7 @@ const createSafeUserObject = (user, userType) => {
         permissions: user.permissions,
         department: user.department,
       };
-    case 'delivery_agent':
+    case "delivery_agent":
       return {
         ...baseObject,
         fullName: user.fullName,
@@ -68,68 +70,91 @@ const validatePassword = (password) => {
     throw new Error("Password must be at least 8 characters long");
   }
   if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
-    throw new Error("Password must contain at least one uppercase letter, one lowercase letter, and one number");
+    throw new Error(
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+    );
   }
 };
 
 const getUserModel = (userType) => {
   switch (userType) {
-    case 'user': return User;
-    case 'vendor': return Vendor;
-    case 'admin': return Admin;
-    case 'delivery_agent': return DeliveryAgent;
-    default: return null;
+    case "customer":
+      return User;
+    case "vendor":
+      return Vendor;
+    case "admin":
+      return Admin;
+    case "delivery_agent":
+      return DeliveryAgent;
+    default:
+      return null;
   }
 };
 
 const getEmailField = (userType) => {
   switch (userType) {
-    case 'vendor': return 'businessEmail';
-    default: return 'email';
+    case "vendor":
+      return "businessEmail";
+    default:
+      return "email";
   }
 };
 
 const getPasswordField = (userType) => {
   switch (userType) {
-    case 'vendor': return 'businessPassword';
-    default: return 'password';
+    case "vendor":
+      return "businessPassword";
+    default:
+      return "password";
   }
 };
 
-export default {
+const authService = {
   // ======================== USER AUTHENTICATION ========================
   userSignup: async (userData, ip) => {
     try {
-      const { fullName, email, password, phone } = userData;
+      const { fullName, email, password } = userData;
 
       if (!fullName || !email || !password) {
-        return { code: 400, success: false, message: "Full name, email, and password are required" };
+        return {
+          code: 400,
+          success: false,
+          message: "Full name, email, and password are required",
+        };
       }
 
       validatePassword(password);
 
       const existingUser = await User.findOne({ email });
       if (existingUser) {
-        return { code: 409, success: false, message: "User already exists with this email" };
+        return {
+          code: 409,
+          success: false,
+          message: "User already exists with this email",
+        };
       }
 
       const hashedPassword = await bcrypt.hash(password, 12);
       const newUser = new User({
         ...userData,
         password: hashedPassword,
-        role: 'user'
+        role: "customer",
       });
 
       const savedUser = await newUser.save();
-      const safeUser = createSafeUserObject(savedUser, 'user');
-      const token = middleware.generateToken(safeUser);
+      const safeUser = createSafeUserObject(savedUser, "user");
+      const token = middleware.generateUserToken(safeUser);
 
       // Send welcome email
       try {
         await sendEmail({
           to: email,
           subject: `Welcome to Our Platform - ${new Date().toLocaleString()}`,
-          html: emailTemplates.signupHTML(fullName, new Date().toLocaleString(), ip),
+          html: emailTemplates.signupHTML(
+            fullName,
+            new Date().toLocaleString(),
+            ip
+          ),
         });
       } catch (mailErr) {
         console.error("❌ Error sending welcome email:", mailErr);
@@ -152,17 +177,23 @@ export default {
     }
   },
 
-  userLogin: async (email, password) => {
+  userLogin: async (data) => {
     try {
+      const { email, password } = data;
+
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        return { code: 400, success: false, message: "Valid email is required" };
+        return {
+          code: 400,
+          success: false,
+          message: "Valid email is required",
+        };
       }
 
       if (!password) {
         return { code: 400, success: false, message: "Password is required" };
       }
 
-      const user = await User.findOne({ email }).select('+password');
+      const user = await User.findOne({ email }).select("+password");
       if (!user) {
         return { code: 404, success: false, message: "User not found" };
       }
@@ -172,8 +203,8 @@ export default {
         return { code: 401, success: false, message: "Invalid credentials" };
       }
 
-      const safeUser = createSafeUserObject(user, 'user');
-      const token = middleware.generateToken(safeUser);
+      const safeUser = createSafeUserObject(user, "user");
+      const token = middleware.generateUserToken(user);
 
       return {
         code: 200,
@@ -192,336 +223,11 @@ export default {
     }
   },
 
-  // ======================== VENDOR AUTHENTICATION ========================
-  vendorSignup: async (vendorData, ip) => {
+  updateUser: async (userId, tokenId, updateData) => {
     try {
-      const {
-        businessName,
-        businessDescription,
-        businessPhoneNumber,
-        businessEmail,
-        businessPassword,
-        agreeToTerms,
-      } = vendorData;
-
-      if (!businessName || !businessDescription || !businessPhoneNumber || !businessEmail || !businessPassword) {
-        return { code: 400, success: false, message: "All business fields are required" };
+      if (userId !== tokenId) {
+        return { code: 403, success: false, message: "Unauthorized" };
       }
-
-      if (!agreeToTerms) {
-        return { code: 400, success: false, message: "You must agree to the terms and conditions" };
-      }
-
-      validatePassword(businessPassword);
-
-      const existingVendor = await Vendor.findOne({ businessEmail });
-      if (existingVendor) {
-        return { code: 409, success: false, message: "Vendor already exists with this email" };
-      }
-
-      const hashedPassword = await bcrypt.hash(businessPassword, 12);
-      const newVendor = new Vendor({
-        ...vendorData,
-        businessPassword: hashedPassword,
-        role: 'vendor',
-        verificationStatus: 'pending'
-      });
-
-      const savedVendor = await newVendor.save();
-      const safeVendor = createSafeUserObject(savedVendor, 'vendor');
-      const token = middleware.generateToken(safeVendor);
-
-      // Send welcome email
-      try {
-        await sendEmail({
-          to: businessEmail,
-          subject: `Welcome to Our Platform - ${new Date().toLocaleString()}`,
-          html: emailTemplates.signupHTML(businessName, new Date().toLocaleString(), ip),
-        });
-      } catch (mailErr) {
-        console.error("❌ Error sending welcome email:", mailErr);
-      }
-
-      return {
-        code: 201,
-        success: true,
-        message: "Vendor registered successfully",
-        data: safeVendor,
-        token,
-      };
-    } catch (error) {
-      console.error("Vendor signup error:", error);
-      return {
-        code: 400,
-        success: false,
-        message: error.message || "Registration failed",
-      };
-    }
-  },
-
-  vendorLogin: async (loginData, ip) => {
-    try {
-      const { businessEmail, businessPassword } = loginData;
-
-      if (!businessEmail || !businessPassword) {
-        return { code: 400, success: false, message: "Email and password are required" };
-      }
-
-      const vendor = await Vendor.findOne({ businessEmail }).select('+businessPassword');
-      if (!vendor) {
-        return { code: 404, success: false, message: "Vendor not found" };
-      }
-
-      const isMatch = await bcrypt.compare(businessPassword, vendor.businessPassword);
-      if (!isMatch) {
-        return { code: 401, success: false, message: "Invalid credentials" };
-      }
-
-      const safeVendor = createSafeUserObject(vendor, 'vendor');
-      const token = middleware.generateToken(safeVendor);
-
-      // Send login notification
-      try {
-        await sendEmail({
-          to: businessEmail,
-          subject: `Login Alert - ${new Date().toLocaleString()}`,
-          html: emailTemplates.loginHTML(vendor.businessName, new Date().toLocaleString(), ip),
-        });
-      } catch (mailErr) {
-        console.error("❌ Error sending login notification:", mailErr);
-      }
-
-      return {
-        code: 200,
-        success: true,
-        message: "Login successful",
-        data: safeVendor,
-        token,
-      };
-    } catch (error) {
-      console.error("Vendor login error:", error);
-      return {
-        code: 500,
-        success: false,
-        message: "Login failed",
-      };
-    }
-  },
-
-  // ======================== ADMIN AUTHENTICATION ========================
-  adminSignup: async (adminData, ip) => {
-    try {
-      const { fullName, email, password, department, permissions } = adminData;
-
-      if (!fullName || !email || !password || !department) {
-        return { code: 400, success: false, message: "Full name, email, password, and department are required" };
-      }
-
-      validatePassword(password);
-
-      const existingAdmin = await Admin.findOne({ email });
-      if (existingAdmin) {
-        return { code: 409, success: false, message: "Admin already exists with this email" };
-      }
-
-      const hashedPassword = await bcrypt.hash(password, 12);
-      const newAdmin = new Admin({
-        ...adminData,
-        password: hashedPassword,
-        role: 'admin',
-        permissions: permissions || ['read']
-      });
-
-      const savedAdmin = await newAdmin.save();
-      const safeAdmin = createSafeUserObject(savedAdmin, 'admin');
-      const token = middleware.generateToken(safeAdmin);
-
-      // Send welcome email
-      try {
-        await sendEmail({
-          to: email,
-          subject: `Admin Account Created - ${new Date().toLocaleString()}`,
-          html: emailTemplates.signupHTML(fullName, new Date().toLocaleString(), ip),
-        });
-      } catch (mailErr) {
-        console.error("❌ Error sending welcome email:", mailErr);
-      }
-
-      return {
-        code: 201,
-        success: true,
-        message: "Admin account created successfully",
-        data: safeAdmin,
-        token,
-      };
-    } catch (error) {
-      console.error("Admin signup error:", error);
-      return {
-        code: 400,
-        success: false,
-        message: error.message || "Admin registration failed",
-      };
-    }
-  },
-
-  adminLogin: async (loginData, ip) => {
-    try {
-      const { email, password } = loginData;
-
-      if (!email || !password) {
-        return { code: 400, success: false, message: "Email and password are required" };
-      }
-
-      const admin = await Admin.findOne({ email }).select('+password');
-      if (!admin) {
-        return { code: 404, success: false, message: "Admin not found" };
-      }
-
-      const isMatch = await bcrypt.compare(password, admin.password);
-      if (!isMatch) {
-        return { code: 401, success: false, message: "Invalid credentials" };
-      }
-
-      const safeAdmin = createSafeUserObject(admin, 'admin');
-      const token = middleware.generateToken(safeAdmin);
-
-      // Send login notification
-      try {
-        await sendEmail({
-          to: email,
-          subject: `Admin Login Alert - ${new Date().toLocaleString()}`,
-          html: emailTemplates.loginHTML(admin.fullName, new Date().toLocaleString(), ip),
-        });
-      } catch (mailErr) {
-        console.error("❌ Error sending login notification:", mailErr);
-      }
-
-      return {
-        code: 200,
-        success: true,
-        message: "Admin login successful",
-        data: safeAdmin,
-        token,
-      };
-    } catch (error) {
-      console.error("Admin login error:", error);
-      return {
-        code: 500,
-        success: false,
-        message: "Login failed",
-      };
-    }
-  },
-
-  // ======================== DELIVERY AGENT AUTHENTICATION ========================
-  deliveryAgentSignup: async (agentData, ip) => {
-    try {
-      const { fullName, email, password, phone, vehicleType, licenseNumber } = agentData;
-
-      if (!fullName || !email || !password || !phone || !vehicleType || !licenseNumber) {
-        return { code: 400, success: false, message: "All fields are required" };
-      }
-
-      validatePassword(password);
-
-      const existingAgent = await DeliveryAgent.findOne({ email });
-      if (existingAgent) {
-        return { code: 409, success: false, message: "Delivery agent already exists with this email" };
-      }
-
-      const hashedPassword = await bcrypt.hash(password, 12);
-      const newAgent = new DeliveryAgent({
-        ...agentData,
-        password: hashedPassword,
-        role: 'delivery_agent',
-        isAvailable: true,
-        verificationStatus: 'pending'
-      });
-
-      const savedAgent = await newAgent.save();
-      const safeAgent = createSafeUserObject(savedAgent, 'delivery_agent');
-      const token = middleware.generateToken(safeAgent);
-
-      // Send welcome email
-      try {
-        await sendEmail({
-          to: email,
-          subject: `Delivery Agent Account Created - ${new Date().toLocaleString()}`,
-          html: emailTemplates.signupHTML(fullName, new Date().toLocaleString(), ip),
-        });
-      } catch (mailErr) {
-        console.error("❌ Error sending welcome email:", mailErr);
-      }
-
-      return {
-        code: 201,
-        success: true,
-        message: "Delivery agent registered successfully",
-        data: safeAgent,
-        token,
-      };
-    } catch (error) {
-      console.error("Delivery agent signup error:", error);
-      return {
-        code: 400,
-        success: false,
-        message: error.message || "Registration failed",
-      };
-    }
-  },
-
-  deliveryAgentLogin: async (loginData, ip) => {
-    try {
-      const { email, password } = loginData;
-
-      if (!email || !password) {
-        return { code: 400, success: false, message: "Email and password are required" };
-      }
-
-      const agent = await DeliveryAgent.findOne({ email }).select('+password');
-      if (!agent) {
-        return { code: 404, success: false, message: "Delivery agent not found" };
-      }
-
-      const isMatch = await bcrypt.compare(password, agent.password);
-      if (!isMatch) {
-        return { code: 401, success: false, message: "Invalid credentials" };
-      }
-
-      const safeAgent = createSafeUserObject(agent, 'delivery_agent');
-      const token = middleware.generateToken(safeAgent);
-
-      // Send login notification
-      try {
-        await sendEmail({
-          to: email,
-          subject: `Delivery Agent Login Alert - ${new Date().toLocaleString()}`,
-          html: emailTemplates.loginHTML(agent.fullName, new Date().toLocaleString(), ip),
-        });
-      } catch (mailErr) {
-        console.error("❌ Error sending login notification:", mailErr);
-      }
-
-      return {
-        code: 200,
-        success: true,
-        message: "Login successful",
-        data: safeAgent,
-        token,
-      };
-    } catch (error) {
-      console.error("Delivery agent login error:", error);
-      return {
-        code: 500,
-        success: false,
-        message: "Login failed",
-      };
-    }
-  },
-
-  // ======================== USER MANAGEMENT ========================
-  updateUser: async (userId, updateData) => {
-    try {
       if (!mongoose.Types.ObjectId.isValid(userId)) {
         return { code: 400, success: false, message: "Invalid user ID" };
       }
@@ -545,7 +251,7 @@ export default {
         return { code: 404, success: false, message: "User not found" };
       }
 
-      const safeUser = createSafeUserObject(updatedUser, 'user');
+      const safeUser = createSafeUserObject(updatedUser, "user");
 
       return {
         code: 200,
@@ -590,7 +296,159 @@ export default {
     }
   },
 
-  // ======================== PASSWORD RESET METHODS ========================
+  // ======================== VENDOR AUTHENTICATION ========================
+  vendorSignup: async (vendorData, ip) => {
+    try {
+      const {
+        businessName,
+        businessDescription,
+        businessAddress,
+        businessPhoneNumber,
+        businessEmail,
+        businessPassword,
+        agreeToTerms,
+      } = vendorData;
+
+      if (
+        !businessName ||
+        !businessDescription ||
+        !businessAddress ||
+        !businessPhoneNumber ||
+        !businessEmail ||
+        !businessPassword
+      ) {
+        return {
+          code: 400,
+          success: false,
+          message: "All business fields are required",
+        };
+      }
+
+      if (!agreeToTerms) {
+        return {
+          code: 400,
+          success: false,
+          message: "You must agree to the terms and conditions",
+        };
+      }
+
+      validatePassword(businessPassword);
+
+      const existingVendor = await Vendor.findOne({ businessEmail });
+      if (existingVendor) {
+        return {
+          code: 409,
+          success: false,
+          message: "Vendor already exists with this email",
+        };
+      }
+
+      const hashedPassword = await bcrypt.hash(businessPassword, 12);
+      const newVendor = new Vendor({
+        ...vendorData,
+        businessPassword: hashedPassword,
+        role: "vendor",
+        verificationStatus: "pending",
+      });
+
+      const savedVendor = await newVendor.save();
+      const safeVendor = createSafeUserObject(savedVendor, "vendor");
+      const token = middleware.generateVendorToken(safeVendor);
+
+      // Send welcome email
+      try {
+        await sendEmail({
+          to: businessEmail,
+          subject: `Welcome to Our Platform - ${new Date().toLocaleString()}`,
+          html: emailTemplates.signupHTML(
+            businessName,
+            new Date().toLocaleString(),
+            ip
+          ),
+        });
+      } catch (mailErr) {
+        console.error("❌ Error sending welcome email:", mailErr);
+      }
+
+      return {
+        code: 201,
+        success: true,
+        message: "Vendor registered successfully",
+        data: safeVendor,
+        token,
+      };
+    } catch (error) {
+      console.error("Vendor signup error:", error);
+      return {
+        code: 400,
+        success: false,
+        message: error.message || "Registration failed",
+      };
+    }
+  },
+
+  vendorLogin: async (loginData, ip) => {
+    try {
+      const { businessEmail, businessPassword } = loginData;
+
+      if (!businessEmail || !businessPassword) {
+        return {
+          code: 400,
+          success: false,
+          message: "Email and password are required",
+        };
+      }
+
+      const vendor = await Vendor.findOne({ businessEmail }).select(
+        "+businessPassword"
+      );
+      if (!vendor) {
+        return { code: 404, success: false, message: "Vendor not found" };
+      }
+
+      const isMatch = await bcrypt.compare(
+        businessPassword,
+        vendor.businessPassword
+      );
+      if (!isMatch) {
+        return { code: 401, success: false, message: "Invalid credentials" };
+      }
+
+      const safeVendor = createSafeUserObject(vendor, "vendor");
+      const token = middleware.generateVendorToken(safeVendor);
+
+      // Send login notification
+      try {
+        await sendEmail({
+          to: businessEmail,
+          subject: `Login Alert - ${new Date().toLocaleString()}`,
+          html: emailTemplates.loginHTML(
+            vendor.businessName,
+            new Date().toLocaleString(),
+            ip
+          ),
+        });
+      } catch (mailErr) {
+        console.error("❌ Error sending login notification:", mailErr);
+      }
+
+      return {
+        code: 200,
+        success: true,
+        message: "Login successful",
+        data: safeVendor,
+        token,
+      };
+    } catch (error) {
+      console.error("Vendor login error:", error);
+      return {
+        code: 500,
+        success: false,
+        message: "Login failed",
+      };
+    }
+  },
+
   vendorResetToken: async (email) => {
     try {
       const vendor = await Vendor.findOne({ businessEmail: email });
@@ -600,7 +458,10 @@ export default {
 
       const rawToken = crypto.randomInt(100000, 999999).toString();
       const tokenExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-      const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(rawToken)
+        .digest("hex");
 
       vendor.resetToken = hashedToken;
       vendor.resetTokenExpires = tokenExpires;
@@ -625,13 +486,25 @@ export default {
       });
 
       if (!emailStatus?.accepted?.length) {
-        return { code: 400, success: false, message: "Failed to send verification code" };
+        return {
+          code: 400,
+          success: false,
+          message: "Failed to send verification code",
+        };
       }
 
-      return { code: 200, success: true, message: "Reset code sent successfully" };
+      return {
+        code: 200,
+        success: true,
+        message: "Reset code sent successfully",
+      };
     } catch (error) {
       console.error("Vendor reset token error:", error);
-      return { code: 500, success: false, message: "Failed to send reset code" };
+      return {
+        code: 500,
+        success: false,
+        message: "Failed to send reset code",
+      };
     }
   },
 
@@ -644,14 +517,25 @@ export default {
       }
 
       if (vendor.resetBlockedUntil && new Date() < vendor.resetBlockedUntil) {
-        return { code: 429, success: false, message: "Too many attempts. Try again later." };
+        return {
+          code: 429,
+          success: false,
+          message: "Too many attempts. Try again later.",
+        };
       }
 
       validatePassword(newPassword);
 
-      const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
 
-      if (!vendor.resetToken || vendor.resetToken !== hashedToken || new Date() > vendor.resetTokenExpires) {
+      if (
+        !vendor.resetToken ||
+        vendor.resetToken !== hashedToken ||
+        new Date() > vendor.resetTokenExpires
+      ) {
         vendor.invalidResetAttempts = (vendor.invalidResetAttempts || 0) + 1;
 
         if (vendor.invalidResetAttempts >= 5) {
@@ -659,7 +543,11 @@ export default {
         }
         await vendor.save();
 
-        return { code: 400, success: false, message: "Invalid or expired verification code" };
+        return {
+          code: 400,
+          success: false,
+          message: "Invalid or expired verification code",
+        };
       }
 
       const hashedPassword = await bcrypt.hash(newPassword, 12);
@@ -672,10 +560,143 @@ export default {
       vendor.passwordChangedAt = new Date();
       await vendor.save();
 
-      return { code: 200, success: true, message: "Password reset successfully" };
+      return {
+        code: 200,
+        success: true,
+        message: "Password reset successfully",
+      };
     } catch (error) {
       console.error("Vendor password reset error:", error);
-      return { code: 500, success: false, message: error.message || "Password reset failed" };
+      return {
+        code: 500,
+        success: false,
+        message: error.message || "Password reset failed",
+      };
+    }
+  },
+
+  // ======================== ADMIN AUTHENTICATION ========================
+  adminSignup: async (adminData, ip) => {
+    try {
+      const { fullName, email, password, department, permissions } = adminData;
+
+      if (!fullName || !email || !password || !department) {
+        return {
+          code: 400,
+          success: false,
+          message: "Full name, email, password, and department are required",
+        };
+      }
+
+      validatePassword(password);
+
+      const existingAdmin = await Admin.findOne({ email });
+      if (existingAdmin) {
+        return {
+          code: 409,
+          success: false,
+          message: "Admin already exists with this email",
+        };
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 12);
+      const newAdmin = new Admin({
+        ...adminData,
+        password: hashedPassword,
+        role: "admin",
+        permissions: permissions || ["read"],
+      });
+
+      const savedAdmin = await newAdmin.save();
+      const safeAdmin = createSafeUserObject(savedAdmin, "admin");
+      const token = middleware.generateAdminToken(safeAdmin);
+
+      // Send welcome email
+      try {
+        await sendEmail({
+          to: email,
+          subject: `Admin Account Created - ${new Date().toLocaleString()}`,
+          html: emailTemplates.signupHTML(
+            fullName,
+            new Date().toLocaleString(),
+            ip
+          ),
+        });
+      } catch (mailErr) {
+        console.error("❌ Error sending welcome email:", mailErr);
+      }
+
+      return {
+        code: 201,
+        success: true,
+        message: "Admin account created successfully",
+        data: safeAdmin,
+        token,
+      };
+    } catch (error) {
+      console.error("Admin signup error:", error);
+      return {
+        code: 400,
+        success: false,
+        message: error.message || "Admin registration failed",
+      };
+    }
+  },
+
+  adminLogin: async (loginData, ip) => {
+    try {
+      const { email, password } = loginData;
+
+      if (!email || !password) {
+        return {
+          code: 400,
+          success: false,
+          message: "Email and password are required",
+        };
+      }
+
+      const admin = await Admin.findOne({ email }).select("+password");
+      if (!admin) {
+        return { code: 404, success: false, message: "Admin not found" };
+      }
+
+      const isMatch = await bcrypt.compare(password, admin.password);
+      if (!isMatch) {
+        return { code: 401, success: false, message: "Invalid credentials" };
+      }
+
+      const safeAdmin = createSafeUserObject(admin, "admin");
+      const token = middleware.generateAdminToken(safeAdmin);
+
+      // Send login notification
+      try {
+        await sendEmail({
+          to: email,
+          subject: `Admin Login Alert - ${new Date().toLocaleString()}`,
+          html: emailTemplates.loginHTML(
+            admin.fullName,
+            new Date().toLocaleString(),
+            ip
+          ),
+        });
+      } catch (mailErr) {
+        console.error("❌ Error sending login notification:", mailErr);
+      }
+
+      return {
+        code: 200,
+        success: true,
+        message: "Admin login successful",
+        data: safeAdmin,
+        token,
+      };
+    } catch (error) {
+      console.error("Admin login error:", error);
+      return {
+        code: 500,
+        success: false,
+        message: "Login failed",
+      };
     }
   },
 
@@ -688,7 +709,10 @@ export default {
 
       const rawToken = crypto.randomInt(100000, 999999).toString();
       const tokenExpires = new Date(Date.now() + 15 * 60 * 1000);
-      const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(rawToken)
+        .digest("hex");
 
       admin.resetToken = hashedToken;
       admin.resetTokenExpires = tokenExpires;
@@ -713,13 +737,25 @@ export default {
       });
 
       if (!emailStatus?.accepted?.length) {
-        return { code: 400, success: false, message: "Failed to send verification code" };
+        return {
+          code: 400,
+          success: false,
+          message: "Failed to send verification code",
+        };
       }
 
-      return { code: 200, success: true, message: "Reset code sent successfully" };
+      return {
+        code: 200,
+        success: true,
+        message: "Reset code sent successfully",
+      };
     } catch (error) {
       console.error("Admin reset token error:", error);
-      return { code: 500, success: false, message: "Failed to send reset code" };
+      return {
+        code: 500,
+        success: false,
+        message: "Failed to send reset code",
+      };
     }
   },
 
@@ -733,10 +769,21 @@ export default {
 
       validatePassword(newPassword);
 
-      const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
 
-      if (!admin.resetToken || admin.resetToken !== hashedToken || new Date() > admin.resetTokenExpires) {
-        return { code: 400, success: false, message: "Invalid or expired verification code" };
+      if (
+        !admin.resetToken ||
+        admin.resetToken !== hashedToken ||
+        new Date() > admin.resetTokenExpires
+      ) {
+        return {
+          code: 400,
+          success: false,
+          message: "Invalid or expired verification code",
+        };
       }
 
       const hashedPassword = await bcrypt.hash(newPassword, 12);
@@ -747,10 +794,167 @@ export default {
       admin.passwordChangedAt = new Date();
       await admin.save();
 
-      return { code: 200, success: true, message: "Password reset successfully" };
+      return {
+        code: 200,
+        success: true,
+        message: "Password reset successfully",
+      };
     } catch (error) {
       console.error("Admin password reset error:", error);
-      return { code: 500, success: false, message: error.message || "Password reset failed" };
+      return {
+        code: 500,
+        success: false,
+        message: error.message || "Password reset failed",
+      };
+    }
+  },
+
+  // ======================== DELIVERY AGENT AUTHENTICATION ========================
+  deliveryAgentSignup: async (agentData, imagePath, ip) => {
+    try {
+      const { fullName, email, password, phone, vehicleType, licenseNumber } =
+        agentData;
+      const licenseImage = imagePath;
+      console.log("Agent Data:", licenseImage, agentData);
+
+      if (
+        !fullName ||
+        !email ||
+        !password ||
+        !phone ||
+        !vehicleType || //bicycle', 'motorcycle', 'car', 'van', 'truck
+        !licenseNumber
+      ) {
+        return {
+          code: 400,
+          success: false,
+          message: "All fields are required",
+        };
+      }
+
+      validatePassword(password);
+
+      const existingAgent = await DeliveryAgent.findOne({ email });
+      if (existingAgent) {
+        return {
+          code: 409,
+          success: false,
+          message: "Delivery agent already exists with this email",
+        };
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 12);
+      const newAgent = new DeliveryAgent({
+        ...agentData,
+        password: hashedPassword,
+        licenseImage,
+        role: "delivery_agent",
+        isAvailable: true,
+        verificationStatus: "pending",
+      });
+
+      const savedAgent = await newAgent.save();
+      const safeAgent = createSafeUserObject(savedAgent, "delivery_agent");
+      const token = middleware.generateUserToken(safeAgent);
+
+      // Send welcome email
+      try {
+        await sendEmail({
+          to: email,
+          subject: `Delivery Agent Account Created - ${new Date().toLocaleString()}`,
+          html: emailTemplates.signupHTML(
+            fullName,
+            new Date().toLocaleString(),
+            ip
+          ),
+        });
+      } catch (mailErr) {
+        console.error("❌ Error sending welcome email:", mailErr);
+      }
+
+      return {
+        code: 201,
+        success: true,
+        message: "Delivery agent registered successfully",
+        data: safeAgent,
+        token,
+      };
+    } catch (error) {
+      console.error("Delivery agent signup error:", error);
+      return {
+        code: 400,
+        success: false,
+        message: error.message || "Registration failed",
+      };
+    }
+  },
+
+  deliveryAgentLogin: async (loginData, ip) => {
+    try {
+      const { email, password } = loginData;
+
+      if (!email || !password) {
+        return {
+          code: 400,
+          success: false,
+          message: "Email and password are required",
+        };
+      }
+
+      const agent = await DeliveryAgent.findOne({ email: email });
+      if (!agent) {
+        return {
+          code: 404,
+          success: false,
+          message: "Delivery agent not found",
+        };
+      }
+      if (!agent.password) {
+        return {
+          code: 500,
+          success: false,
+          message: "Corrupted agent record: password hash missing",
+        };
+      }
+
+      const isMatch = await bcrypt.compare(password, agent.password);
+
+      if (!isMatch) {
+        return { code: 401, success: false, message: "Invalid credentials" };
+      }
+
+      const safeAgent = createSafeUserObject(agent, "delivery_agent");
+      const token = middleware.generateUserToken(safeAgent);
+
+      // Send login notification
+      try {
+        await sendEmail({
+          to: email,
+          subject: `Delivery Agent Login Alert - ${new Date().toLocaleString()}`,
+          html: emailTemplates.loginHTML(
+            agent.fullName,
+            new Date().toLocaleString(),
+            ip
+          ),
+        });
+      } catch (mailErr) {
+        console.error("❌ Error sending login notification:", mailErr);
+      }
+
+      return {
+        code: 200,
+        success: true,
+        message: "Login successful",
+        data: safeAgent,
+        token,
+      };
+    } catch (error) {
+      console.error("Delivery agent login error:", error);
+      return {
+        code: 500,
+        success: false,
+        message: "Login failed",
+      };
     }
   },
 
@@ -758,17 +962,24 @@ export default {
     try {
       const agent = await DeliveryAgent.findOne({ email });
       if (!agent) {
-        return { code: 404, success: false, message: "Delivery agent not found" };
+        return {
+          code: 404,
+          success: false,
+          message: "Delivery agent not found",
+        };
       }
 
       const rawToken = crypto.randomInt(100000, 999999).toString();
       const tokenExpires = new Date(Date.now() + 15 * 60 * 1000);
-      const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(rawToken)
+        .digest("hex");
 
       agent.resetToken = hashedToken;
       agent.resetTokenExpires = tokenExpires;
       await agent.save();
-
+      console.log(rawToken, tokenExpires);
       const tokenHTML = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Password Reset Request</h2>
@@ -788,13 +999,25 @@ export default {
       });
 
       if (!emailStatus?.accepted?.length) {
-        return { code: 400, success: false, message: "Failed to send verification code" };
+        return {
+          code: 400,
+          success: false,
+          message: "Failed to send verification code",
+        };
       }
 
-      return { code: 200, success: true, message: "Reset code sent successfully" };
+      return {
+        code: 200,
+        success: true,
+        message: "Reset code sent successfully",
+      };
     } catch (error) {
       console.error("Delivery agent reset token error:", error);
-      return { code: 500, success: false, message: "Failed to send reset code" };
+      return {
+        code: 500,
+        success: false,
+        message: "Failed to send reset code",
+      };
     }
   },
 
@@ -803,15 +1026,31 @@ export default {
       const agent = await DeliveryAgent.findOne({ email });
 
       if (!agent) {
-        return { code: 404, success: false, message: "Delivery agent not found" };
+        return {
+          code: 404,
+          success: false,
+          message: "Delivery agent not found",
+        };
       }
 
       validatePassword(newPassword);
 
-      const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+      console.log(agent);
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
 
-      if (!agent.resetToken || agent.resetToken !== hashedToken || new Date() > agent.resetTokenExpires) {
-        return { code: 400, success: false, message: "Invalid or expired verification code" };
+      if (
+        !agent.resetToken ||
+        agent.resetToken !== hashedToken ||
+        new Date() > agent.resetTokenExpires
+      ) {
+        return {
+          code: 400,
+          success: false,
+          message: "Invalid or expired verification code",
+        };
       }
 
       const hashedPassword = await bcrypt.hash(newPassword, 12);
@@ -822,71 +1061,82 @@ export default {
       agent.passwordChangedAt = new Date();
       await agent.save();
 
-      return { code: 200, success: true, message: "Password reset successfully" };
+      return {
+        code: 200,
+        success: true,
+        message: "Password reset successfully",
+      };
     } catch (error) {
       console.error("Delivery agent password reset error:", error);
-      return { code: 500, success: false, message: error.message || "Password reset failed" };
+      return {
+        code: 500,
+        success: false,
+        message: error.message || "Password reset failed",
+      };
     }
   },
 
   // ======================== TOKEN VERIFICATION ========================
-  verifyToken: async (authHeader) => {
+  verifyToken: async (token) => {
     try {
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return { code: 401, success: false, message: "No token provided" };
+      const decoded = await jwt.verify(token, JWT_SECRET);
+
+      // Get user data based on role
+      let user = null;
+      const Model = getUserModel(decoded.role);
+
+      if (!Model) {
+        return { code: 400, success: false, message: "Invalid user role" };
       }
 
-      const token = authHeader.split(' ')[1];
-      
-      try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        
-        // Get user data based on role
-        let user = null;
-        const Model = getUserModel(decoded.role);
-        
-        if (!Model) {
-          return { code: 400, success: false, message: "Invalid user role" };
-        }
+      const emailField = getEmailField(decoded.role);
 
-        const emailField = getEmailField(decoded.role);
-        const query = decoded.role === 'vendor' 
-          ? { businessEmail: decoded.businessEmail || decoded.email }
+      const query =
+        decoded.role === "vendor"
+          ? { businessEmail: decoded.businessEmail }
           : { email: decoded.email };
 
-        user = await Model.findOne(query);
+      user = await Model.findOne(query);
 
-        if (!user) {
-          return { code: 404, success: false, message: "User not found" };
-        }
-
-        // Check if password was changed after token was issued
-        if (user.passwordChangedAt && decoded.iat < user.passwordChangedAt.getTime() / 1000) {
-          return { code: 401, success: false, message: "Token expired due to password change" };
-        }
-
-        const safeUser = createSafeUserObject(user, decoded.role);
-
-        return {
-          code: 200,
-          success: true,
-          message: "Token is valid",
-          data: safeUser,
-        };
-      } catch (jwtError) {
-        return { code: 401, success: false, message: "Invalid token" };
+      if (!user) {
+        return { code: 404, success: false, message: "User not found" };
       }
+
+      // Check if password was changed after token was issued
+      if (
+        user.passwordChangedAt &&
+        decoded.iat < user.passwordChangedAt.getTime() / 1000
+      ) {
+        return {
+          code: 401,
+          success: false,
+          message: "Token expired due to password change",
+        };
+      }
+
+      const safeUser = createSafeUserObject(user, decoded.role);
+
+      return {
+        code: 200,
+        success: true,
+        message: "Token is valid",
+        data: safeUser,
+      };
     } catch (error) {
       console.error("Token verification error:", error);
-      return { code: 500, success: false, message: "Token verification failed" };
+      return {
+        code: 500,
+        success: false,
+        message: "Token verification failed",
+      };
     }
   },
 
- // ======================== PROFILE MANAGEMENT ========================
-  getProfile: async (authHeader) => {
+  // ======================== PROFILE MANAGEMENT ========================
+  getProfile: async (token) => {
     try {
-      const tokenResult = await this.verifyToken(authHeader);
-      
+      const tokenResult = await authService.verifyToken(token);
+
       if (!tokenResult.success) {
         return tokenResult;
       }
@@ -901,18 +1151,20 @@ export default {
         return {
           code: 400,
           success: false,
-          message: "Invalid user type"
+          message: "Invalid user type",
         };
       }
 
       // Fetch the user profile, excluding sensitive fields
-      const userProfile = await Model.findById(userId).select('-password -businessPassword -resetToken -resetTokenExpires');
-      
+      const userProfile = await Model.findById(userId).select(
+        "-password -businessPassword -resetToken -resetTokenExpires"
+      );
+
       if (!userProfile) {
         return {
           code: 404,
           success: false,
-          message: "User profile not found"
+          message: "User profile not found",
         };
       }
 
@@ -923,23 +1175,22 @@ export default {
         code: 200,
         success: true,
         message: "Profile retrieved successfully",
-        data: safeProfile
+        data: safeProfile,
       };
-
     } catch (error) {
       console.error("Get profile error:", error);
       return {
         code: 500,
         success: false,
-        message: error.message || "Failed to retrieve profile"
+        message: error.message || "Failed to retrieve profile",
       };
     }
   },
 
-  updateProfile: async (authHeader, updateData) => {
+  updateProfile: async (token, updateData) => {
     try {
-      const tokenResult = await this.verifyToken(authHeader);
-      
+      const tokenResult = await authService.verifyToken(token);
+
       if (!tokenResult.success) {
         return tokenResult;
       }
@@ -954,7 +1205,7 @@ export default {
         return {
           code: 400,
           success: false,
-          message: "Invalid user type"
+          message: "Invalid user type",
         };
       }
 
@@ -964,7 +1215,7 @@ export default {
 
       // Determine the password field based on user type
       const passwordField = getPasswordField(userType);
-      
+
       if (password || businessPassword) {
         const newPassword = password || businessPassword;
         validatePassword(newPassword);
@@ -977,13 +1228,13 @@ export default {
         userId,
         { $set: updateFields },
         { new: true, runValidators: true }
-      ).select('-password -businessPassword -resetToken -resetTokenExpires');
+      ).select("-password -businessPassword -resetToken -resetTokenExpires");
 
       if (!updatedProfile) {
         return {
           code: 404,
           success: false,
-          message: "User profile not found"
+          message: "User profile not found",
         };
       }
 
@@ -994,23 +1245,22 @@ export default {
         code: 200,
         success: true,
         message: "Profile updated successfully",
-        data: safeProfile
+        data: safeProfile,
       };
-
     } catch (error) {
       console.error("Update profile error:", error);
       return {
         code: 400,
         success: false,
-        message: error.message || "Failed to update profile"
+        message: error.message || "Failed to update profile",
       };
     }
   },
 
   changePassword: async (authHeader, { currentPassword, newPassword }) => {
     try {
-      const tokenResult = await this.verifyToken(authHeader);
-      
+      const tokenResult = await authService.verifyToken(authHeader);
+
       if (!tokenResult.success) {
         return tokenResult;
       }
@@ -1025,37 +1275,40 @@ export default {
         return {
           code: 400,
           success: false,
-          message: "Invalid user type"
+          message: "Invalid user type",
         };
       }
 
       // Determine the password field based on user type
       const passwordField = getPasswordField(userType);
-      
+
       // Find user with password field
       const user = await Model.findById(userId).select(`+${passwordField}`);
       if (!user) {
         return {
           code: 404,
           success: false,
-          message: "User not found"
+          message: "User not found",
         };
       }
 
       // Verify current password
-      const isMatch = await bcrypt.compare(currentPassword, user[passwordField]);
+      const isMatch = await bcrypt.compare(
+        currentPassword,
+        user[passwordField]
+      );
       if (!isMatch) {
         return {
           code: 401,
           success: false,
-          message: "Current password is incorrect"
+          message: "Current password is incorrect",
         };
       }
 
       // Validate and update password
       validatePassword(newPassword);
       const hashedPassword = await bcrypt.hash(newPassword, 12);
-      
+
       user[passwordField] = hashedPassword;
       user.passwordChangedAt = new Date();
       await user.save();
@@ -1064,23 +1317,22 @@ export default {
       return {
         code: 200,
         success: true,
-        message: "Password changed successfully"
+        message: "Password changed successfully",
       };
-
     } catch (error) {
       console.error("Change password error:", error);
       return {
         code: 400,
         success: false,
-        message: error.message || "Failed to change password"
+        message: error.message || "Failed to change password",
       };
     }
   },
 
   deactivateAccount: async (authHeader) => {
     try {
-      const tokenResult = await this.verifyToken(authHeader);
-      
+      const tokenResult = await authService.verifyToken(authHeader);
+
       if (!tokenResult.success) {
         return tokenResult;
       }
@@ -1095,7 +1347,7 @@ export default {
         return {
           code: 400,
           success: false,
-          message: "Invalid user type"
+          message: "Invalid user type",
         };
       }
 
@@ -1104,26 +1356,30 @@ export default {
         userId,
         { isActive: false, deactivatedAt: new Date() },
         { new: true }
-      ).select('-password -businessPassword -resetToken -resetTokenExpires');
+      ).select("-password -businessPassword -resetToken -resetTokenExpires");
 
       if (!updatedUser) {
         return {
           code: 404,
           success: false,
-          message: "User not found"
+          message: "User not found",
         };
       }
 
       // Send deactivation notification email
       const emailField = getEmailField(userType);
       const email = updatedUser[emailField];
-      const name = updatedUser.fullName || updatedUser.businessName || updatedUser.email;
+      const name =
+        updatedUser.fullName || updatedUser.businessName || updatedUser.email;
 
       try {
         await sendEmail({
           to: email,
           subject: "Account Deactivation Confirmation",
-          html: emailTemplates.deactivationHTML(name, new Date().toLocaleString())
+          html: emailTemplates.deactivationHTML(
+            name,
+            new Date().toLocaleString()
+          ),
         });
       } catch (emailError) {
         console.error("Failed to send deactivation email:", emailError);
@@ -1132,16 +1388,18 @@ export default {
       return {
         code: 200,
         success: true,
-        message: "Account deactivated successfully"
+        message: "Account deactivated successfully",
       };
-
     } catch (error) {
       console.error("Deactivate account error:", error);
       return {
         code: 500,
         success: false,
-        message: error.message || "Failed to deactivate account"
+        message: error.message || "Failed to deactivate account",
       };
     }
-  }
-}
+  },
+};
+
+
+export default authService;;
