@@ -179,6 +179,7 @@ const authService = {
 
   userLogin: async (data) => {
     try {
+      console.log(data)
       const { email, password } = data;
 
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
