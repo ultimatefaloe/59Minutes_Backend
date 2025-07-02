@@ -10,7 +10,7 @@ const productSchema = new mongoose.Schema({
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
   vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', required: true },
   images: [{ type: String }],
-  stock: { type: Number, required: true },
+  minOrder: { type: Number, required: true },
   material: [{ type: String, required: true }],
   color: [{ type: String, required: true }],
   attributes: [{
@@ -20,7 +20,7 @@ const productSchema = new mongoose.Schema({
   variations: [{
     combination: [String],
     price: Number,
-    stock: Number,
+    minOrder: Number,
     sku: String
   }],
   specifications: [{
@@ -29,7 +29,7 @@ const productSchema = new mongoose.Schema({
   }],
   rating: { type: Number, default: 0 },
   reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Review' }],
-  status: { type: String, enum: ['draft', 'published', 'out_of_stock', 'discontinued'], default: 'draft' },
+  status: { type: String, enum: ['draft', 'published', 'out_of_minOrder', 'discontinued'], default: 'draft' },
   tags: [{ type: String }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }

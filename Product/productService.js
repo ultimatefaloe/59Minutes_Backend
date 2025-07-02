@@ -14,7 +14,7 @@ const productService = {
         "price",
         "category",
         "vendor",
-        "stock",
+        "minOrder",
       ];
       for (const field of requiredFields) {
         if (!product[field]) {

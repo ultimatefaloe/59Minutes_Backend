@@ -15,7 +15,7 @@ export const productRoutes = (router) => {
   // Create Product
   productRouter.post(
     "/create/:vendorid",
-    middleware.jwtDecodeToken(),
+    middleware.decodeFirebaseToken(),
     middleware.isVendor(),
     upload.array("images", 5), // Accept multiple images
     async (req, res) => {
@@ -119,7 +119,7 @@ export const productRoutes = (router) => {
   // Update Product
   productRouter.patch(
     "/edit/:id",
-    middleware.jwtDecodeToken(),
+    middleware.decodeFirebaseToken(),
     middleware.isVendor(),
     upload.array("images", 5), // Accept multiple images
     async (req, res) => {
@@ -189,7 +189,7 @@ export const productRoutes = (router) => {
   // Delete Product
   productRouter.delete(
     "/:id",
-    middleware.jwtDecodeToken(),
+    middleware.decodeFirebaseToken(),
     async (req, res) => {
       try {
         const productId = req.params.id;
@@ -297,7 +297,7 @@ export const productRoutes = (router) => {
   // Get Products by Vendor
   productRouter.get(
     "/vendor/:vendorId",
-    middleware.jwtDecodeToken(),
+    middleware.decodeFirebaseToken(),
     middleware.isVendor(),
     async (req, res) => {
       try {
