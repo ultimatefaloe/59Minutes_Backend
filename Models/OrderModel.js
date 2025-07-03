@@ -16,13 +16,14 @@ const orderSchema = new mongoose.Schema({
   }],
 
   shippingAddress: {
-    type: { type: String, enum: ['home', 'work', 'other'] },
+    // type: { type: String, enum: ['home', 'work', 'other'] },
     street: String,
     city: String,
     state: String,
     country: String,
     postalCode: String,
     contactName: String,
+    contactEmail: String,
     contactPhone: String
   }, 
 

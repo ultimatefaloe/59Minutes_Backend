@@ -7,7 +7,6 @@ const productService = {
   create: async (product) => {
     try {
       // Validate required fields
-      console.log("Product Data:", product);
       const requiredFields = [
         "name",
         "description",
@@ -214,7 +213,6 @@ const productService = {
       };
 
       const products = await Product.paginate(query, options);
-      console.log(products)
       if (!products || products.docs.length === 0) {
         return { success: false, error: "No products found", code: 404 };
       }

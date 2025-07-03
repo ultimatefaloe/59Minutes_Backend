@@ -15,6 +15,7 @@ class Middleware {
 
         try {
           const decoded = await admin.auth().verifyIdToken(token);
+          console.log.decoded
           req.user = decoded;
         } catch (error) {
           console.warn("Token decode failed:", error.message);

@@ -12,7 +12,7 @@ export const vendorRoutes = (router) => {
     router.use('/vendors', vendorRouter);
     
     // GET vendor by ID
-    vendorRouter.get('/:id', middleware.jwtDecodeToken(), middleware.isVendor(),async (req, res) => {
+    vendorRouter.get('/:id', middleware.decodeJWTToken(), middleware.isVendor(),async (req, res) => {
         try {
 
             const response = await vendorService.get(req.params.id);
@@ -30,7 +30,7 @@ export const vendorRoutes = (router) => {
     });
 
     // UPDATE vendor
-    vendorRouter.put('/:id', Middleware.jwtDecodeToken(), middleware.isVendor(), async (req, res) => {
+    vendorRouter.put('/:id', Middleware.decodeJWTToken(), middleware.isVendor(), async (req, res) => {
         try {
 
             const response = await vendorService.update(req.params.id, req.body);
@@ -88,7 +88,7 @@ export const vendorRoutes = (router) => {
     })
 
     // DELETE (soft delete) vendor
-    vendorRouter.delete('/:id', Middleware.jwtDecodeToken(), middleware.isVendor(), async (req, res) => {
+    vendorRouter.delete('/:id', Middleware.decodeJWTToken(), middleware.isVendor(), async (req, res) => {
         try {
             const response = await vendorService.delete(req.params.id);
 
@@ -105,7 +105,7 @@ export const vendorRoutes = (router) => {
     });
 
     // LIST vendors with filters and pagination
-    vendorRouter.get('/', middleware.jwtDecodeToken(), async (req, res) => {
+    vendorRouter.get('/', middleware.decodeJWTToken(), async (req, res) => {
         try {
             const response = await vendorService.list(req.query)
 
@@ -117,7 +117,7 @@ export const vendorRoutes = (router) => {
     });
 
     // VERIFY vendor (admin use)
-    vendorRouter.patch('/verify/:id', Middleware.jwtDecodeToken(), middleware.isAdmin(), async (req, res) => {
+    vendorRouter.patch('/verify/:id', Middleware.decodeJWTToken(), middleware.isAdmin(), async (req, res) => {
         try {
             const { status, adminId } = req.body;
             const response = await vendorService.verify(req.params.id, status, adminId);
@@ -135,7 +135,7 @@ export const vendorRoutes = (router) => {
     });
 
     // GET vendor statistics
-    vendorRouter.get('/stats/:vendorId', middleware.jwtDecodeToken(), middleware.isVendor(), async (req, res) => {
+    vendorRouter.get('/stats/:vendorId', middleware.decodeJWTToken(), middleware.isVendor(), async (req, res) => {
         try {
             const response = await vendorService.getStats(req.params.vendorId);
 

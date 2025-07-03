@@ -1,6 +1,6 @@
 // orderService.js
-import Order from "../Models/Order.js";
 import axios from "axios";
+import Order from "../Models/OrderModel.js";
 
 // Paystack configuration
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || "sk_test_your_secret_key_here";
@@ -26,7 +26,7 @@ export const OrderService = {
 
       // Calculate totals
       const subTotal = orderData.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const total = subTotal + (orderData.shippingFee || 0) - (orderData.discount || 0);
+      const total = subTotal + (orderData.shippingFee || 0); //- (orderData.discount || 0
 
       const order = new Order({
         ...orderData,

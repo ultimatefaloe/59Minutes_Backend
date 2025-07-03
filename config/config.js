@@ -16,6 +16,7 @@ export default {
         user: true,
         product: true,
         vendor: true,
+        order: true
     },
 
     mongo: {

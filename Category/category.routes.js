@@ -10,7 +10,7 @@ export const categoryRoutes = (router) => {
     router.use('/categories', categoryRouter);
 
     // Create category
-    categoryRouter.post('/add-category', Middleware.jwtDecodeToken(), async (req, res) => {
+    categoryRouter.post('/add-category', Middleware.decodeJWTToken(), async (req, res) => {
         const result = await categoryService.create(req.body);
         return res.status(result.code || (result.success ? 201 : 400)).json(result);
     });
@@ -61,13 +61,13 @@ export const categoryRoutes = (router) => {
     });
 
     // Update category
-    categoryRouter.patch('/update/:id', Middleware.jwtDecodeToken(), async (req, res) => {
+    categoryRouter.patch('/update/:id', Middleware.decodeJWTToken(), async (req, res) => {
         const result = await categoryService.update(req.params.id, req.body);
         return res.status(result.code || 200).json(result);
     });
 
     // Delete category
-    categoryRouter.delete('/:id', Middleware.jwtDecodeToken(), async (req, res) => {
+    categoryRouter.delete('/:id', Middleware.decodeJWTToken(), async (req, res) => {
         const result = await categoryService.delete(req.params.id);
         return res.status(result.code || 200).json(result);
     });

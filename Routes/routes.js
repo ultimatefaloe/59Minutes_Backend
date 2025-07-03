@@ -6,11 +6,16 @@ import { productRoutes } from '../Product/product.routes.js';
 import { vendorRoutes } from '../Vendor/vendor.routes.js';
 import { categoryRoutes } from '../Category/category.routes.js';
 import { authRoutes } from '../Auth/auth.routes.js';
+import { orderRoutes } from '../Order/order.routes.js';
 
 export default () => {
     const router = express.Router();
 
     authRoutes(router);
+
+    if(config.switch.order){
+        orderRoutes(router)
+    }
 
     if (config.switch.cat){
         categoryRoutes(router)

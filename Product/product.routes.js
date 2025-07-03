@@ -19,7 +19,6 @@ export const productRoutes = (router) => {
     middleware.isVendor(),
     upload.array("images", 5), // Accept multiple images
     async (req, res) => {
-      console.log(req.user)
       const vendorId = req.params.vendorid;
       const productData = {
         ...req.body,
