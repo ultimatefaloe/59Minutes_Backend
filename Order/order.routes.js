@@ -1,6 +1,6 @@
 // order.routes.js
 import { Router } from "express";
-import middleware from "../Middleware/middleware.js";
+import { decodeJWTToken } from "../Middleware/jwt-middlerware.js";
 import { OrderService } from "./orderService.js";
 import upload from "../Middleware/multerCloudinary.js";
 
@@ -23,17 +23,16 @@ export const orderRoutes = (router) => {
   // Create new order
   orderRouter.post(
     "/place-order",
-    middleware.decodeFirebaseToken(),
+     decodeJWTToken(),
     async (req, res) => {
       try {
-        console.log(req.user)
         const orderData = {
           ...req.body,
-          user: req.user.user_id
+          user: req.user.id
         }
 
         const order = await OrderService.createOrder(orderData);
-
+        
         res.status(201).json({
           success: true,
           message: "Order created successfully",
@@ -52,7 +51,7 @@ export const orderRoutes = (router) => {
   // Get user orders
   orderRouter.get(
     "/my-orders",
-    middleware.decodeFirebaseToken(),
+     decodeJWTToken(),
     async (req, res) => {
       try {
         const userId = req.user.uid;
@@ -81,7 +80,7 @@ export const orderRoutes = (router) => {
   // Get specific order
   orderRouter.get(
     "/:orderId",
-    middleware.decodeFirebaseToken(),
+     decodeJWTToken(),
     async (req, res) => {
       try {
         const { orderId } = req.params;
@@ -113,7 +112,7 @@ export const orderRoutes = (router) => {
   // Update payment status (Paystack webhook or manual verification)
   orderRouter.put(
     "/update-payment-status/:orderId",
-    middleware.decodeFirebaseToken(),
+     decodeJWTToken(),
     async (req, res) => {
       try {
         const { orderId } = req.params;
@@ -150,7 +149,7 @@ export const orderRoutes = (router) => {
   // Verify payment with Paystack
   orderRouter.post(
     "/verify-payment/:orderId",
-    middleware.decodeFirebaseToken(),
+     decodeJWTToken(),
     async (req, res) => {
       try {
         const { orderId } = req.params;
@@ -165,6 +164,7 @@ export const orderRoutes = (router) => {
 
         const verification = await OrderService.verifyPayment(
           orderId,
+          req.body,
           paymentReference
         );
 
@@ -186,7 +186,7 @@ export const orderRoutes = (router) => {
   // Update order status (for admin/vendor)
   orderRouter.put(
     "/update-status/:orderId",
-    middleware.decodeFirebaseToken(),
+     decodeJWTToken(),
     async (req, res) => {
       try {
         const { orderId } = req.params;
@@ -216,7 +216,7 @@ export const orderRoutes = (router) => {
   // Cancel order
   orderRouter.put(
     "/cancel/:orderId",
-    middleware.decodeFirebaseToken(),
+     decodeJWTToken(),
     async (req, res) => {
       try {
         const { orderId } = req.params;
@@ -247,7 +247,7 @@ export const orderRoutes = (router) => {
   // Add tracking update
   orderRouter.post(
     "/tracking/:orderId",
-    middleware.decodeFirebaseToken(),
+     decodeJWTToken(),
     async (req, res) => {
       try {
         const { orderId } = req.params;

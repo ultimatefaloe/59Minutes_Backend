@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import mongoosePaginate from "mongoose-paginate-v2";
 
 const userSchema = new mongoose.Schema({
-  // uid: {type: String, required: true},
+  firebaseUid: { type: String, unique: true, sparse: true },
   fullName: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String },
@@ -26,6 +26,7 @@ const userSchema = new mongoose.Schema({
     }],
     totalPrice: { type: Number, default: 0 }
   },
+  provider: { type: String, enum: ["local", "google.com", "facebook.com"], default: "local" },
   role: { type: String, enum: ['customer', 'vendor', 'admin'], default: 'customer' },
   isVerified: { type: Boolean, default: false },
   lastLogin: { type: Date },

@@ -2,43 +2,19 @@ import admin from "../config/firebase-config.js";
 import jwt from "jsonwebtoken";
 import config from "../config/config.js";
 import Vendor from "../Models/VendorModel.js";
+import User from "../Models/UserModel.js";
 
 const { JWT_PRIVATE_KEY } = config.jwt;
 class Middleware {
-  decodeFirebaseToken() {
-    return async (req, res, next) => {
-      req.user = null;
-      const authHeader = req.headers?.authorization;
-
-      if (authHeader && authHeader.startsWith("Bearer ")) {
-        const token = authHeader.split(" ")[1];
-
-        try {
-          const decoded = await admin.auth().verifyIdToken(token);
-          console.log.decoded
-          req.user = decoded;
-        } catch (error) {
-          console.warn("Token decode failed:", error.message);
-          req.user = null;
-          return next();
-        }
-      }
-
-      return next();
-    };
-  }
-
   decodeJWTToken() {
     return async (req, res, next) => {
       const authHeader = req.headers.authorization;
 
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        return res
-          .status(401)
-          .json({
-            success: false,
-            message: "Access denied. No token provided.",
-          });
+        return res.status(401).json({
+          success: false,
+          message: "Access denied. No token provided.",
+        });
       }
 
       const token = authHeader.split(" ")[1];
@@ -49,12 +25,10 @@ class Middleware {
         console.log("Decoded JWT:", decoded);
         const verifyUser = await Vendor.findById(decoded.id);
         if (!verifyUser) {
-          return res
-            .status(401)
-            .json({
-              success: false,
-              message: "Invalid token. User not found.",
-            });
+          return res.status(401).json({
+            success: false,
+            message: "Invalid token. User not found.",
+          });
         }
         if (verifyUser.role !== decoded.role) {
           return res
@@ -85,7 +59,15 @@ class Middleware {
       const token = authHeader.split(" ")[1];
 
       try {
-        const decodedToken = await admin.auth().verifyIdToken(token);
+        const decoded = await jwt.verify(token, JWT_PRIVATE_KEY);
+        const user = await User.findById({ id: decoded.id });
+        if (!user) {
+          return res.status(401).json({
+            success: false,
+            message: "Authorization token required",
+          });
+        };
+        delete user.password
         req.user = decodedToken;
         next();
       } catch (error) {
@@ -172,12 +154,10 @@ class Middleware {
       }
 
       if (req.user.verificationStatus !== "verified") {
-        return res
-          .status(403)
-          .json({
-            success: false,
-            message: "Access denied. User is not verified.",
-          });
+        return res.status(403).json({
+          success: false,
+          message: "Access denied. User is not verified.",
+        });
       }
 
       if (req.user.role !== "vendor" && req.user.role !== "admin") {

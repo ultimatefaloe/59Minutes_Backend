@@ -5,6 +5,7 @@ import Category from "../Models/CategoryModel.js";
 import mongoose from "mongoose";
 import { resolveCategoryId } from "../utils/resolveCategoryId.js";
 import middleware from "../Middleware/middleware.js";
+import { decodeJWTToken } from "../Middleware/jwt-middlerware.js";
 import upload from "../Middleware/multerCloudinary.js";
 
 const productRouter = express.Router();
@@ -15,7 +16,7 @@ export const productRoutes = (router) => {
   // Create Product
   productRouter.post(
     "/create/:vendorid",
-    middleware.decodeFirebaseToken(),
+    decodeJWTToken(),
     middleware.isVendor(),
     upload.array("images", 5), // Accept multiple images
     async (req, res) => {
@@ -118,7 +119,7 @@ export const productRoutes = (router) => {
   // Update Product
   productRouter.patch(
     "/edit/:id",
-    middleware.decodeFirebaseToken(),
+    decodeJWTToken(),
     middleware.isVendor(),
     upload.array("images", 5), // Accept multiple images
     async (req, res) => {
@@ -188,7 +189,7 @@ export const productRoutes = (router) => {
   // Delete Product
   productRouter.delete(
     "/:id",
-    middleware.decodeFirebaseToken(),
+    decodeJWTToken(),
     async (req, res) => {
       try {
         const productId = req.params.id;
@@ -296,7 +297,7 @@ export const productRoutes = (router) => {
   // Get Products by Vendor
   productRouter.get(
     "/vendor/:vendorId",
-    middleware.decodeFirebaseToken(),
+    decodeJWTToken(),
     middleware.isVendor(),
     async (req, res) => {
       try {

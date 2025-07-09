@@ -113,51 +113,84 @@ const authService = {
   // ======================== USER AUTHENTICATION ========================
   userSignup: async (userData, ip) => {
     try {
-      const { fullName, email, password } = userData;
+      const { email, firebaseUid, provider = "local" } = userData;
 
-      if (!fullName || !email || !password) {
+      if (!email) {
         return {
           code: 400,
           success: false,
-          message: "Full name, email, and password are required",
+          message: "Email is required",
         };
       }
 
-      validatePassword(password);
+      // Validate password for local signup
+      if (provider === "local" && !userData.password) {
+        return {
+          code: 400,
+          success: false,
+          message: "Password is required for local signup",
+        };
+      }
 
-      const existingUser = await User.findOne({ email });
+      // Validate firebaseUid for social signup
+      if (provider !== "local" && !firebaseUid) {
+        return {
+          code: 400,
+          success: false,
+          message: "Firebase UID is required for social signup",
+        };
+      }
+
+      const existingUser = await User.findOne({
+        $or: [{ email }, ...(firebaseUid ? [{ firebaseUid }] : [])],
+      });
+
       if (existingUser) {
         return {
           code: 409,
           success: false,
-          message: "User already exists with this email",
+          message:
+            existingUser.email === email
+              ? "User with this email already exists"
+              : "User with this social account already exists",
         };
       }
 
-      const hashedPassword = await bcrypt.hash(password, 12);
-      const newUser = new User({
-        ...userData,
-        password: hashedPassword,
-        role: "customer",
-      });
+      const userToCreate = {
+        fullName: userData.fullName,
+        email,
+        phone: userData.phone,
+        provider,
+        firebaseUid,
+        password:
+          provider === "local"
+            ? await bcrypt.hash(userData.password, 12)
+            : undefined,
+        isEmailVerified: provider !== "local",
+        avatar: userData.picture,
+      };
 
+      const newUser = new User(userToCreate);
       const savedUser = await newUser.save();
+
       const safeUser = createSafeUserObject(savedUser, "user");
       const token = middleware.generateUserToken(safeUser);
 
-      // Send welcome email
-      try {
-        await sendEmail({
-          to: email,
-          subject: `Welcome to Our Platform - ${new Date().toLocaleString()}`,
-          html: emailTemplates.signupHTML(
-            fullName,
-            new Date().toLocaleString(),
-            ip
-          ),
-        });
-      } catch (mailErr) {
-        console.error("❌ Error sending welcome email:", mailErr);
+      // Send welcome email only for local signup
+      if (provider === "local") {
+        try {
+          await sendEmail({
+            to: email,
+            subject: `Welcome to Our Platform - ${new Date().toLocaleString()}`,
+            html: emailTemplates.signupHTML(
+              userData.fullName,
+              new Date().toLocaleString(),
+              ip
+            ),
+          });
+        } catch (mailErr) {
+          console.error("❌ Error sending welcome email:", mailErr);
+        }
       }
 
       return {
@@ -170,38 +203,81 @@ const authService = {
     } catch (error) {
       console.error("User signup error:", error);
       return {
-        code: 400,
+        code: 500,
         success: false,
-        message: error.message || "Registration failed",
+        message: "Registration failed",
       };
     }
   },
 
   userLogin: async (data) => {
     try {
-      console.log(data)
-      const { email, password } = data;
+      const { email, password, firebaseUid, provider = "local" } = data;
 
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (!email) {
         return {
           code: 400,
           success: false,
-          message: "Valid email is required",
+          message: "Email is required",
         };
       }
 
-      if (!password) {
-        return { code: 400, success: false, message: "Password is required" };
+      // Social login validation
+      if (provider !== "local") {
+        if (!firebaseUid) {
+          return {
+            code: 400,
+            success: false,
+            message: "Firebase UID is required for social login",
+          };
+        }
+
+        const user = await User.findOne({ firebaseUid });
+        if (!user) {
+          return {
+            code: 404,
+            success: false,
+            message: "User not found. Please sign up first.",
+          };
+        }
+
+        const token = middleware.generateUserToken(user);
+        return {
+          code: 200,
+          success: true,
+          message: "Login successful",
+          data: createSafeUserObject(user, "user"),
+          token,
+        };
       }
 
-      const user = await User.findOne({ email }).select("+password");
+      // Local login validation
+      if (!password) {
+        return {
+          code: 400,
+          success: false,
+          message: "Password is required for local login",
+        };
+      }
+
+      const user = await User.findOne({ email, provider: "local" }).select(
+        "+password"
+      );
       if (!user) {
-        return { code: 404, success: false, message: "User not found" };
+        return {
+          code: 404,
+          success: false,
+          message: "User not found. Please sign up first.",
+        };
       }
 
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-        return { code: 401, success: false, message: "Invalid credentials" };
+        return {
+          code: 401,
+          success: false,
+          message: "Invalid credentials",
+        };
       }
 
       const safeUser = createSafeUserObject(user, "user");
@@ -1078,53 +1154,150 @@ const authService = {
   },
 
   // ======================== TOKEN VERIFICATION ========================
+  // Helper function to get the appropriate model based on user role
+
   verifyToken: async (token) => {
-    try {
-      const decoded = await jwt.verify(token, JWT_SECRET);
-
-      // Get user data based on role
-      let user = null;
-      const Model = getUserModel(decoded.role);
-
-      if (!Model) {
-        return { code: 400, success: false, message: "Invalid user role" };
+    const verifyResponse = (response, decoded) => {
+      if (!response) {
+        return {
+          code: 404,
+          success: false,
+          message: "User not found in database",
+        };
       }
 
-      const emailField = getEmailField(decoded.role);
-
-      const query =
-        decoded.role === "vendor"
-          ? { businessEmail: decoded.businessEmail }
-          : { email: decoded.email };
-
-      user = await Model.findOne(query);
-
-      if (!user) {
-        return { code: 404, success: false, message: "User not found" };
+      if (response.isActive === false) {
+        return {
+          code: 403,
+          success: false,
+          message: "User account is deactivated",
+        };
       }
 
       // Check if password was changed after token was issued
       if (
-        user.passwordChangedAt &&
-        decoded.iat < user.passwordChangedAt.getTime() / 1000
+        response.passwordChangedAt &&
+        decoded.iat < response.passwordChangedAt.getTime() / 1000
       ) {
         return {
           code: 401,
           success: false,
-          message: "Token expired due to password change",
+          message: "Token expired due to password change. Please login again.",
         };
       }
 
-      const safeUser = createSafeUserObject(user, decoded.role);
+      // Create safe user object without sensitive data
+      const safeUser = { ...response.toObject() };
+      delete safeUser.password;
+      delete safeUser.passwordResetToken;
+      delete safeUser.passwordResetExpires;
 
       return {
         code: 200,
         success: true,
         message: "Token is valid",
-        data: safeUser,
+        data: {
+          ...safeUser,
+          tokenInfo: {
+            issuedAt: new Date(decoded.iat * 1000),
+            expiresAt: decoded.exp ? new Date(decoded.exp * 1000) : null,
+          },
+        },
       };
+    };
+    try {
+      // Verify JWT token
+      const decoded = await jwt.verify(token, JWT_SECRET);
+
+      // Check token expiration (JWT library handles this, but adding explicit check)
+      const currentTime = Math.floor(Date.now() / 1000);
+      if (decoded.exp && decoded.exp < currentTime) {
+        return {
+          code: 401,
+          success: false,
+          message: "Token has expired",
+        };
+      }
+
+      // Validate required fields in decoded token
+      if (!decoded.role) {
+        return {
+          code: 400,
+          success: false,
+          message: "Token missing role information",
+        };
+      }
+
+      if (!decoded.id) {
+        return {
+          code: 400,
+          success: false,
+          message: "Token missing user ID",
+        };
+      }
+
+      // Normalize role to lowercase for consistency
+      const userRole = decoded.role.toLowerCase();
+
+      // Validate role against allowed roles
+      const allowedRoles = ["vendor", "delivery", "admin", "customer"];
+      if (!allowedRoles.includes(userRole)) {
+        return {
+          code: 400,
+          success: false,
+          message: "Invalid user role",
+        };
+      }
+
+      let userData = null;
+
+      switch (userRole) {
+        case "vendor":
+          userData = await Vendor.findById(decoded.id);
+          break;
+        case "delivery":
+          userData = await Delivery.findById(decoded.id);
+          break;
+        case "admin":
+          userData = await Admin.findById(decoded.id);
+          break;
+        case "customer":
+          userData = await User.findById(decoded.id);
+          break;
+        default:
+          return {
+            code: 400,
+            success: false,
+            message: "Invalid user role",
+          };
+      }
+
+      // Verify the response and return appropriate result
+      return verifyResponse(userData, decoded);
     } catch (error) {
       console.error("Token verification error:", error);
+
+      // Handle specific JWT errors
+      if (error.name === "TokenExpiredError") {
+        return {
+          code: 401,
+          success: false,
+          message: "Token has expired",
+        };
+      } else if (error.name === "JsonWebTokenError") {
+        return {
+          code: 401,
+          success: false,
+          message: "Invalid token format",
+        };
+      } else if (error.name === "NotBeforeError") {
+        return {
+          code: 401,
+          success: false,
+          message: "Token not active yet",
+        };
+      }
+
       return {
         code: 500,
         success: false,
@@ -1402,5 +1575,4 @@ const authService = {
   },
 };
 
-
-export default authService;;
+export default authService;

@@ -1,14 +1,14 @@
 import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  user: { type: String, required: true, ref: 'User'},
 
   items: [{
-    product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+    vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', require: true},
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
     quantity: { type: Number, required: true },
-    price: { type: Number, required: true },
+    discountPrice: { type: Number, required: true },
     variation: { type: String },
-    vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' },
 
     // 🆕 Design customization fields
     designOption: { type: String, enum: ['UPLOAD', 'TEMPLATE', 'NONE'], default: 'UPLOAD' },
@@ -62,6 +62,7 @@ const orderSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, {
+  strictPopulate: false,
   toJSON: {
     virtuals: true,
     versionKey: false,
